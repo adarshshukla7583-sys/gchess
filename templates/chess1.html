@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Chess One - PvP</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* --- 1. Global Settings & Background --- */
+  body {
+    background: radial-gradient(circle at center, #2b2b40 0%, #1a1a2e 100%);
+    color: white;
+    text-align: center;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    animation: slideDown 0.8s ease-out;
+  }
+
+  /* --- 2. The Rules Modal (Glass Effect) --- */
+  #rulesBox {
+    width: 90%;
+    max-width: 500px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: left;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: absolute;
+    z-index: 10;
+    animation: zoomIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  }
+
+  #rulesBox ul { padding-left: 20px; line-height: 1.8; margin-bottom: 20px;}
+  
+  /* Time Selection Grid */
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+  }
+
+  /* --- 3. The Chess Board --- */
+  #gameArea {
+    display: none; /* Hidden until game starts */
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #chessboard {
+    width: 480px;
+    height: 480px;
+    margin: 10px auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    
+    /* Board Styling: Wood/Premium Look */
+    border: 15px solid #4a3b2a;
+    border-radius: 8px;
+    box-shadow: 
+      0 0 0 5px #2a2118, /* Inner border */
+      0 20px 40px rgba(0,0,0,0.6); /* Drop Shadow */
+    
+    /* Animation when board appears */
+    animation: boardFadeIn 0.8s ease-out forwards;
+  }
+
+  /* --- 4. Squares & Colors --- */
+  .square {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    font-size: 40px;
+    user-select: none; /* Text select na ho */
+  }
+
+  /* Green & Cream Theme (Classic Pro) */
+  .white { background-color: #EEEED2; color: black; }
+  .black { background-color: #769656; color: black; }
+
+  /* Check Animation (Red Pulse & Shake) */
+  .in-check {
+    background: radial-gradient(circle, #ff4444 40%, transparent 80%) !important;
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  }
+
+  /* --- 5. Piece Animation --- */
+  .piece-anim {
+    display: inline-block;
+    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4)); /* Shadow for pieces */
+    animation: piecePop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* --- 6. Interaction States (Highlights) --- */
+  .selected {
+    background-color: #baca44 !important; /* Yellow-ish highlight */
+    transition: background 0.2s;
+  }
+
+  .highlight { position: relative; }
+  .highlight::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  .highlight.capture::after {
+    background: transparent;
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+  }
+
+  /* --- 7. Buttons --- */
+  button {
+    padding: 12px 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(118, 75, 162, 0.6);
+  }
+
+  button:active { transform: scale(0.95); }
+
+  /* --- 8. Timer & Status --- */
+  .player-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 480px;
+    margin: 5px 0;
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .timer {
+    font-family: 'Roboto', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 5px 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .timer.active {
+    background: #baca44; /* Active turn highlight */
+    color: #000;
+    box-shadow: 0 0 10px rgba(186, 202, 68, 0.5);
+  }
+
+  .timer.low-time {
+    background: #ff4444;
+    color: white;
+    animation: pulse 1s infinite;
+  }
+
+  /* --- 9. Checkmate Modal --- */
+  #messageModal {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 400px;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 40px;
+    border-radius: 20px;
+    border: 2px solid #baca44;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 0 50px rgba(186, 202, 68, 0.5);
+    animation: zoomIn 0.4s ease-out;
+  }
+
+  #messageModal h2 {
+    color: #fff;
+    font-size: 2.5rem;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px #baca44;
+  }
+
+  #turnDisplay { font-weight: bold; letter-spacing: 1px; }
+
+  /* --- 10. Keyframes --- */
+  @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+  @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes boardFadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes piecePop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
+  @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+</style>
+</head>
+
+<body>
+<h2>♟️ Chess Arena Pro</h2>
+
+<!-- Rules & Time Selection Modal -->
+<div id="rulesBox">
+  <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">Select Time Control</h3>
+  <ul>
+    <li>Two Players: <strong>White</strong> vs <strong>Black</strong></li>
+    <li>Select a timer to begin the match.</li>
+  </ul>
+  
+  <div class="time-grid">
+    <button onclick="selectTime(10, 0)">10 Min</button>
+    <button onclick="selectTime(5, 0)">5 Min</button>
+    <button onclick="selectTime(3, 2)">3 | 2</button>
+    <button onclick="selectTime(2, 0)">2 Min</button>
+    <button onclick="selectTime(1, 0)">1 Min</button>
+    <button onclick="selectTime(0, 0)" style="background: #555;">No Timer</button>
+  </div>
+</div>
+
+<!-- Checkmate / Game Over Modal -->
+<div id="messageModal">
+  <h2 id="msgTitle">Checkmate!</h2>
+  <p id="msgSubtitle" style="color:#ccc; margin-bottom:30px; font-size:1.2rem;">White Wins</p>
+  <button onclick="location.reload()">New Game</button>
+  <button onclick="back()" style="background:#555; margin-left:10px;">Exit</button>
+</div>
+
+<!-- Main Game Area -->
+<div id="gameArea">
+  <!-- Black Player (Top) -->
+  <div class="player-info">
+    <span>Black (Opponent)</span>
+    <div id="timerBlack" class="timer">10:00</div>
+  </div>
+
+  <div id="chessboard"></div>
+
+  <!-- White Player (Bottom) -->
+  <div class="player-info">
+    <span>White (You)</span>
+    <div id="timerWhite" class="timer">10:00</div>
+  </div>
+
+  <p id="turnDisplay" style="margin-top:10px;">Turn: White</p>
+  <button onclick="back()" style="background: #444; margin-top: 10px; width: 200px;">⬅ Exit Game</button>
+</div>
+
+<script>
+function back(){window.location.href="/dashboard"}
+
+/* --- Game State --- */
+let turn="white", selected=null, highlights=[];
+let whiteTime = 600;
+let blackTime = 600;
+let increment = 0;
+let timerInterval = null;
+let gameActive = false;
+
+/* --- UI Elements --- */
+const rulesBox = document.getElementById("rulesBox");
+const gameArea = document.getElementById("gameArea");
+const boardDiv = document.getElementById("chessboard");
+const turnText = document.getElementById("turnDisplay");
+const tWhite = document.getElementById("timerWhite");
+const tBlack = document.getElementById("timerBlack");
+const msgModal = document.getElementById("messageModal");
+const msgTitle = document.getElementById("msgTitle");
+const msgSubtitle = document.getElementById("msgSubtitle");
+
+/* --- Initialization --- */
+function selectTime(minutes, inc) {
+  if (minutes === 0) {
+    whiteTime = Infinity; blackTime = Infinity;
+    tWhite.innerText = "∞"; tBlack.innerText = "∞";
+  } else {
+    whiteTime = minutes * 60; blackTime = minutes * 60;
+    increment = inc;
+    updateTimerUI();
+  }
+
+  rulesBox.style.transition = "all 0.5s";
+  rulesBox.style.opacity = "0";
+  rulesBox.style.transform = "scale(0.8)";
+  
+  setTimeout(() => {
+    rulesBox.style.display = "none";
+    gameArea.style.display = "flex";
+    draw();
+    gameActive = true;
+    if(minutes !== 0) startTimer();
+    highlightTimer();
+  }, 400);
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!gameActive) return;
+    if (turn === "white") {
+      whiteTime--; if (whiteTime <= 0) gameOver("Black", "Time Limit Reached");
+    } else {
+      blackTime--; if (blackTime <= 0) gameOver("White", "Time Limit Reached");
+    }
+    updateTimerUI();
+  }, 1000);
+}
+
+function updateTimerUI() {
+  if (whiteTime === Infinity) return;
+  tWhite.innerText = formatTime(whiteTime);
+  tBlack.innerText = formatTime(blackTime);
+  if (whiteTime < 30) tWhite.classList.add("low-time"); else tWhite.classList.remove("low-time");
+  if (blackTime < 30) tBlack.classList.add("low-time"); else tBlack.classList.remove("low-time");
+}
+
+function formatTime(seconds) {
+  let m = Math.floor(seconds / 60);
+  let s = seconds % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function highlightTimer() {
+  if (turn === "white") { tWhite.classList.add("active"); tBlack.classList.remove("active"); } 
+  else { tBlack.classList.add("active"); tWhite.classList.remove("active"); }
+}
+
+function gameOver(winner, reason) {
+  gameActive = false;
+  clearInterval(timerInterval);
+  msgTitle.innerText = reason === "Checkmate" ? "Checkmate!" : "Game Over";
+  msgSubtitle.innerText = `${winner} Wins`;
+  msgModal.style.display = "block";
+}
+
+const pieces={r:"♜",n:"♞",b:"♝",q:"♛",k:"♚",p:"♟", R:"♖",N:"♘",B:"♗",Q:"♕",K:"♔",P:"♙"};
+
+let board=[
+"rnbqkbnr","pppppppp","........","........",
+"........","........","PPPPPPPP","RNBQKBNR"
+];
+
+function draw(){
+ boardDiv.innerHTML="";
+ 
+ // Find king in check for highlighting
+ const kingInCheck = isCheck(turn) ? findKing(turn) : null;
+ 
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+  let s=document.createElement("div");
+  s.className="square "+((r+c)%2==0?"white":"black");
+  s.dataset.r=r;s.dataset.c=c;
+  
+  if (kingInCheck && kingInCheck.r === r && kingInCheck.c === c) {
+      s.classList.add("in-check");
+  }
+
+  if(board[r][c]!=".") {
+    let pSpan = document.createElement("span");
+    pSpan.className = "piece-anim";
+    pSpan.textContent = pieces[board[r][c]];
+    s.appendChild(pSpan);
+  }
+  
+  s.onclick=()=>click(s);
+  boardDiv.appendChild(s);
+ }}
+
+function click(s){
+ if (!gameActive) return;
+
+ clearHighlight();
+ let r=+s.dataset.r,c=+s.dataset.c,p=board[r][c];
+ 
+ if(selected){
+  let fr=+selected.dataset.r,fc=+selected.dataset.c;
+  
+  // Validate move legality (including self-check prevention)
+  if(tryMove(fr,fc,r,c,turn)){
+   
+   // Execute Real Move
+   if(whiteTime !== Infinity) {
+     if(turn === "white") whiteTime += increment;
+     else blackTime += increment;
+     updateTimerUI();
+   }
+
+   move(fr,fc,r,c);
+   turn=turn=="white"?"black":"white";
+   turnText.innerText="Turn: "+(turn=="white"?"White":"Black");
+   turnText.style.color = turn==="white" ? "#fff" : "#aaa";
+   highlightTimer();
+   
+   // Post-Move Checks
+   if(isCheck(turn)){
+       if(isMate(turn)){
+           draw();
+           setTimeout(()=>gameOver(turn==="white"?"Black":"White", "Checkmate"), 500);
+           return;
+       }
+   }
+   
+   draw();
+   return;
+  }
+  selected.classList.remove("selected");
+  selected=null;
+  // If clicked own piece, select it instead
+  if(p!="." && getColor(p)===turn){
+      selected=s;
+      s.classList.add("selected");
+      showMoves(r,c);
+  }
+  return;
+ }
+ 
+ if(p!="." && getColor(p)===turn){
+  selected=s;
+  s.classList.add("selected");
+  showMoves(r,c);
+ }
+}
+
+function showMoves(r,c){
+ for(let tr=0;tr<8;tr++)for(let tc=0;tc<8;tc++)
+  if(tryMove(r,c,tr,tc,turn)){
+   let i=tr*8+tc;
+   let targetSquare = boardDiv.children[i];
+   targetSquare.classList.add("highlight");
+   if(board[tr][tc] != ".") targetSquare.classList.add("capture");
+   highlights.push(targetSquare);
+ }}
+
+function clearHighlight(){
+  highlights.forEach(h => {
+    h.classList.remove("highlight");
+    h.classList.remove("capture");
+  });
+  highlights=[];
+}
+
+// Basic Geometric Validation (Pseudo-valid)
+function isPseudoValid(fr,fc,tr,tc){
+ let p=board[fr][fc],t=board[tr][tc];
+ if(t!="."&&same(p,t))return false;
+ let dr=tr-fr,dc=tc-fc;
+ switch(p.toLowerCase()){
+  case"p":return pawn(p,fr,fc,tr,tc);
+  case"r":return rook(fr,fc,tr,tc);
+  case"b":return bishop(fr,fc,tr,tc);
+  case"n":return(Math.abs(dr)==2&&Math.abs(dc)==1)||(Math.abs(dr)==1&&Math.abs(dc)==2);
+  case"q":return rook(fr,fc,tr,tc)||bishop(fr,fc,tr,tc);
+  case"k":return Math.abs(dr)<=1&&Math.abs(dc)<=1;
+ }return false;
+}
+
+// Move Test (Prevents self-check)
+function tryMove(fr, fc, tr, tc, color) {
+    if(!isPseudoValid(fr, fc, tr, tc)) return false;
+    
+    // Backup board
+    const savedBoard = [...board];
+    
+    // Simulate move
+    move(fr, fc, tr, tc);
+    
+    // Check if King is safe
+    const safe = !isCheck(color);
+    
+    // Restore board
+    board = savedBoard;
+    
+    return safe;
+}
+
+function move(fr,fc,tr,tc){
+ board[tr]=board[tr].substring(0,tc)+board[fr][fc]+board[tr].substring(tc+1);
+ board[fr]=board[fr].substring(0,fc)+"."+board[fr].substring(fc+1);
+}
+
+/* --- Logic Helpers --- */
+
+function getColor(p){
+    if(p==='.') return null;
+    return p===p.toUpperCase() ? 'white' : 'black';
+}
+
+function findKing(color){
+    const kChar = color === 'white' ? 'K' : 'k';
+    for(let r=0; r<8; r++)
+        for(let c=0; c<8; c++)
+            if(board[r][c] === kChar) return {r, c};
+    return null;
+}
+
+function isCheck(color){
+    const kingPos = findKing(color);
+    if(!kingPos) return false;
+    
+    const oppColor = color === 'white' ? 'black' : 'white';
+    
+    // Check if any opponent piece attacks the king
+    for(let r=0; r<8; r++){
+        for(let c=0; c<8; c++){
+            if(getColor(board[r][c]) === oppColor){
+                // Using geometric check only here to avoid infinite recursion
+                if(isPseudoValid(r, c, kingPos.r, kingPos.c)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function isMate(color){
+    // Try every possible move for current color
+    for(let fr=0; fr<8; fr++){
+        for(let fc=0; fc<8; fc++){
+            if(getColor(board[fr][fc]) === color){
+                for(let tr=0; tr<8; tr++){
+                    for(let tc=0; tc<8; tc++){
+                        if(tryMove(fr, fc, tr, tc, color)) return false; // Found a valid escape
+                    }
+                }
+            }
+        }
+    }
+    return true; // No moves found
+}
+
+function same(a,b){
+ return (a==a.toUpperCase()&&b==b.toUpperCase())||(a==a.toLowerCase()&&b==b.toLowerCase());
+}
+
+/* --- Piece Movement Rules --- */
+function pawn(p,fr,fc,tr,tc){
+ let d=p=="P"?-1:1;
+ if(fc==tc&&board[tr][tc]=="."&&tr-fr==d)return true;
+ if(fc==tc&&board[tr][tc]=="."&&((fr==6&&p=="P")||(fr==1&&p=="p"))&&tr-fr==2*d){
+     // Check path for double move
+     let midR = fr + d;
+     if(board[midR][fc] == ".") return true;
+ }
+ if(Math.abs(tc-fc)==1&&tr-fr==d&&board[tr][tc]!=".")return true;
+ return false;
+}
+function rook(fr,fc,tr,tc){if(fr!=tr&&fc!=tc)return false;return clear(fr,fc,tr,tc)}
+function bishop(fr,fc,tr,tc){if(Math.abs(tr-fr)!=Math.abs(tc-fc))return false;return clear(fr,fc,tr,tc)}
+function clear(fr,fc,tr,tc){
+ let rs=Math.sign(tr-fr),cs=Math.sign(tc-fc);
+ let r=fr+rs,c=fc+cs;
+ while(r!=tr||c!=tc){if(board[r][c]!=".")return false;r+=rs;c+=cs;}
+ return true;
+}
+</script>
+</body>
+</html>

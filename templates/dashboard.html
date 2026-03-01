@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Arena Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<!-- FontAwesome for Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  /* 1. Reset & Base Styles */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    font-family: 'Inter', sans-serif;
+    /* Dark Chess Theme Background */
+    background-color: #1a1a1a;
+    background-image: 
+      linear-gradient(45deg, #222 25%, transparent 25%), 
+      linear-gradient(-45deg, #222 25%, transparent 25%), 
+      linear-gradient(45deg, transparent 75%, #222 75%), 
+      linear-gradient(-45deg, transparent 75%, #222 75%);
+    background-size: 40px 40px;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  /* 2. Sidebar Styling */
+  .sidebar {
+    width: 280px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 20px;
+    position: fixed;
+    height: 100vh;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    color: #d4af37;
+    text-align: center;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .nav-links {
+    list-style: none;
+    flex-grow: 1;
+  }
+
+  .nav-links li {
+    margin-bottom: 15px;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: #e0e0e0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+
+  .nav-links a:hover {
+    background: rgba(212, 175, 55, 0.15);
+    color: #d4af37;
+    transform: translateX(5px);
+  }
+
+  .nav-links a.active {
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    border-left: 4px solid #d4af37;
+  }
+
+  .nav-links i {
+    width: 25px;
+    text-align: center;
+  }
+
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding-top: 20px;
+    border-top: 1px solid #444;
+  }
+
+  .avatar {
+    width: 45px;
+    height: 45px;
+    background: #d4af37;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #1a1a1a;
+    font-size: 1.2rem;
+  }
+
+  .user-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .user-info span {
+    font-size: 0.8rem;
+    color: #aaa;
+  }
+
+  /* 3. Main Content Styling */
+  .main-content {
+    flex-grow: 1;
+    margin-left: 280px; /* Width of sidebar */
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh; 
+  }
+
+  h1.page-title {
+    font-family: 'Cinzel', serif;
+    font-size: 3rem;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #d4af37;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    opacity: 0;
+    animation: fadeInDown 0.8s ease-out forwards;
+    text-align: center;
+  }
+
+  /* 4. Dashboard Grid Container */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    width: 100%;
+    max-width: 1200px; /* Increased to accommodate more cards */
+    margin-bottom: 40px;
+  }
+
+  /* 5. Card Styling */
+  .card {
+    background: rgba(40, 40, 40, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeInUp 0.6s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+
+  .dashboard-grid > div:nth-child(1) { animation-delay: 0.1s; }
+  .dashboard-grid > div:nth-child(2) { animation-delay: 0.2s; }
+  .dashboard-grid > div:nth-child(3) { animation-delay: 0.3s; }
+  .dashboard-grid > div:nth-child(4) { animation-delay: 0.4s; }
+  .dashboard-grid > div:nth-child(5) { animation-delay: 0.5s; }
+
+  .card:hover {
+    transform: translateY(-8px) scale(1.02);
+    background: #333;
+    border-color: #d4af37;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.2);
+  }
+
+  .card a {
+    text-decoration: none;
+    color: #e0e0e0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: color 0.3s;
+    z-index: 2;
+  }
+
+  .card:hover a { color: #d4af37; }
+
+  .card-icon {
+    font-size: 3rem;
+    color: #d4af37;
+    margin-bottom: 15px;
+    opacity: 0.8;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    font-size: 120px;
+    color: rgba(255, 255, 255, 0.03);
+    font-family: "Font Awesome 6 Free"; 
+    font-weight: 900;
+    content: '\f441'; /* Chess Pawn Icon */
+    transform: rotate(15deg);
+    transition: transform 0.4s;
+  }
+
+  .card:hover::before {
+    transform: rotate(0deg) scale(1.1);
+    color: rgba(212, 175, 55, 0.1);
+  }
+
+  /* 6. Logout Button */
+  .logout-btn {
+    text-decoration: none;
+    color: #ff6b6b;
+    font-weight: 600;
+    padding: 10px 25px;
+    border: 2px solid #ff6b6b;
+    border-radius: 50px;
+    transition: all 0.3s;
+    display: inline-block;
+    margin-top: 20px;
+  }
+
+  .logout-btn:hover {
+    background: #ff6b6b;
+    color: white;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
+  }
+
+  /* Animations */
+  @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 70px;
+      padding: 20px 10px;
+    }
+    .logo span, .nav-links span, .user-info {
+      display: none;
+    }
+    .main-content {
+      margin-left: 70px;
+      padding: 20px;
+    }
+    .logo i { font-size: 1.5rem; }
+    .nav-links a { justify-content: center; padding: 15px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <i class="fa-solid fa-chess-knight"></i>
+      <span>CHESS ARENA</span>
+    </div>
+
+    <ul class="nav-links">
+      <li>
+        <a href="#" class="active">
+          <i class="fa-solid fa-user"></i>
+          <span>Profile</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chess/3">
+          <i class="fa-solid fa-puzzle-piece"></i>
+          <span>Puzzles</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chess/1">
+          <i class="fa-solid fa-chess-board"></i>
+          <span>Local PvP</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chess/5">
+          <i class="fa-solid fa-globe"></i>
+          <span>Online Arena</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chess/2">
+          <i class="fa-solid fa-robot"></i>
+          <span>Vs Engine</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chess/4">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          <span>Analysis</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="user-profile">
+      <div class="avatar">
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <div class="user-info">
+        <h4>{{ session.user }}</h4>
+        <span>Online</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <h1 class="page-title">Game Modes</h1>
+
+    <div class="dashboard-grid">
+      
+      <!-- NEW: Online Multiplayer Card -->
+      <div class="card">
+        <i class="fa-solid fa-globe card-icon"></i>
+        <a href="/chess/5">
+          Online Arena <br>
+          <span style="font-size:0.9rem; opacity:0.7; font-weight:400">Real-time Multiplayer</span>
+        </a>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-user-group card-icon"></i>
+        <a href="/chess/1">
+          PvP Arena <br>
+          <span style="font-size:0.9rem; opacity:0.7; font-weight:400">Local Multiplayer</span>
+        </a>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-microchip card-icon"></i>
+        <a href="/chess/2">
+          Neural Engine <br>
+          <span style="font-size:0.9rem; opacity:0.7; font-weight:400">Play vs AI</span>
+        </a>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-puzzle-piece card-icon"></i>
+        <a href="/chess/3">
+          Tactics Lab <br>
+          <span style="font-size:0.9rem; opacity:0.7; font-weight:400">Chess Puzzles</span>
+        </a>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-magnifying-glass-chart card-icon"></i>
+        <a href="/chess/4">
+          Analysis Studio <br>
+          <span style="font-size:0.9rem; opacity:0.7; font-weight:400">Review Your Games</span>
+        </a>
+      </div>
+
+    </div>
+
+    <a href="/logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smooth Animated Signup Form</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* --- Reset and Base Styles --- */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    /* Colorful modern gradient background */
+    background: linear-gradient(135deg, #FF6B6B 0%, #556270 100%);
+    padding: 20px;
+  }
+
+  /* --- The Card Container --- */
+  .signup-card {
+    background: #ffffff;
+    padding: 40px 35px;
+    border-radius: 25px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    /* Deep, soft shadow for a floating effect */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    
+    /* Initial state for entrance animation */
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+    /* Applying the smooth entrance animation */
+    animation: popUpSmooth 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  }
+
+  /* Heading Style */
+  h2 {
+    color: #333;
+    font-weight: 600;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #556270;
+  }
+
+  /* --- Input Field Styles --- */
+  form input {
+    width: 100%;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border: 2px solid #eee;
+    border-radius: 50px; /* "Pill" shape rounded corners */
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    outline: none;
+    /* Smooth transition for all interactions */
+    transition: all 0.3s ease-in-out;
+  }
+
+  /* Style for input placeholders */
+  form input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+  }
+
+  /* Smooth Animation when input is focused */
+  form input:focus {
+    border-color: #FF6B6B; /* Highlights with the theme color */
+    background-color: #fff;
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.15);
+    transform: scale(1.02); /* Subtle expansion effect */
+  }
+
+  /* --- Button Styles --- */
+  form button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 50px;
+    /* Gradient matching the background */
+    background: linear-gradient(to right, #FF6B6B, #874f5f);
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+    /* Smooth transition for hover */
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  /* Smooth Animation on Button Hover */
+  form button:hover {
+    transform: translateY(-5px); /* Lifts up */
+    box-shadow: 0 15px 30px rgba(255, 107, 107, 0.5); /* Shadow grows bigger */
+    background: linear-gradient(to right, #ff8585, #a35f72); /* Slightly brighter gradient */
+  }
+
+  /* Click effect */
+  form button:active {
+    transform: scale(0.98);
+  }
+
+  /* --- Keyframes definition for Entrance Animation --- */
+  @keyframes popUpSmooth {
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="signup-card">
+    <form method="post">
+      <h2>Create Account</h2>
+      <input name="username" type="text" placeholder="Username" required>
+      <input name="password" type="password" placeholder="Password" required>
+      <button type="submit">Sign Up</button>
+    </form>
+  </div>
+
+</body>
+</html>

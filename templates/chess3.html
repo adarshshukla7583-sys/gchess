@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sci-Fi Chess Arena - Chess Puzzles</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;500&display=swap" rel="stylesheet">
+<!-- Import Chess.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+<style>
+  :root {
+    --neon-blue: #00d2ff;
+    --neon-gold: #ffd700;
+    --danger: #ff4b2b;
+    --success: #00f260;
+    --bg-dark: #0f0c29;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg-dark);
+    background-image: radial-gradient(circle at center, #1b1b4b 0%, #0f0c29 100%);
+    color: white;
+    text-align: center;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  h2 {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 4px;
+    font-size: 2.2rem;
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
+    background: linear-gradient(to right, var(--neon-blue), #fff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .main-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 40px;
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+  }
+
+  .board-wrapper {
+    position: relative;
+    padding: 25px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 15px;
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+
+  #chessboard {
+    width: 480px;
+    height: 480px;
+    display: none;
+    grid-template-columns: repeat(8, 1fr);
+    border: 2px solid #2a2a40;
+  }
+
+  .square {
+    width: 60px; height: 60px;
+    font-size: 44px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; position: relative;
+  }
+  .white-sq { background-color: #e0e6ed; }
+  .black-sq { background-color: #4b6cb7; }
+  
+  .piece-w { color: #ffffff; filter: drop-shadow(0 0 2px #000); transition: transform 0.2s; }
+  .piece-b { color: #000000; filter: drop-shadow(0 0 2px #fff); transition: transform 0.2s; }
+
+  .coord {
+    position: absolute; font-size: 11px; font-weight: 900;
+    opacity: 0.8; pointer-events: none; font-family: 'Orbitron', sans-serif;
+    z-index: 10;
+  }
+  .rank-label { top: 2px; left: 2px; }
+  .file-label { bottom: 2px; right: 2px; }
+  .white-sq .coord { color: #4b6cb7; }
+  .black-sq .coord { color: #e0e6ed; }
+
+  .selected { background-color: var(--neon-gold) !important; box-shadow: inset 0 0 20px rgba(0,0,0,0.3); }
+  .highlight::after {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    background: rgba(0, 242, 96, 0.5); border-radius: 50%; box-shadow: 0 0 10px var(--success);
+  }
+  .highlight.capture::after {
+    background: transparent; border: 4px solid var(--danger); width: 42px; height: 42px;
+  }
+  .in-check { background: radial-gradient(circle, var(--danger) 0%, transparent 70%) !important; }
+  .wrong-move { background-color: #ff4b2b !important; animation: shake 0.5s; }
+  
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
+
+  .sidebar { width: 320px; display: flex; flex-direction: column; gap: 15px; }
+
+  .panel {
+    background: rgba(20, 20, 45, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px; border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .elo-display { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--neon-gold); margin-bottom: 5px; }
+  .strike-zone { color: var(--danger); font-size: 1.2rem; margin-bottom: 15px; letter-spacing: 5px; }
+  
+  .status-text { min-height: 5rem; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 0.95rem; line-height: 1.4; text-align: center; color: #ccc; flex-direction: column; gap: 8px;}
+
+  button {
+    padding: 14px; font-size: 13px; font-family: 'Orbitron', sans-serif; font-weight: bold;
+    text-transform: uppercase; color: white; border: none; border-radius: 12px;
+    cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 100%; margin-top: 10px;
+    background: linear-gradient(45deg, #00c6ff, #0072ff);
+    box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3);
+  }
+  button:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0, 114, 255, 0.5); }
+  button:active { transform: scale(0.95); }
+
+  .btn-next { background: linear-gradient(45deg, #11998e, #38ef7d); }
+  .btn-retry { background: linear-gradient(45deg, #cb2d3e, #ef473a); }
+  .btn-exit { background: transparent; border: 1px solid #444; color: #888; margin-top: auto; }
+  .btn-exit:hover { border-color: #fff; color: #fff; }
+
+  #overlay, #promotionOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10, 10, 30, 0.95); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  
+  #promotionOverlay { display: none; z-index: 2000; }
+
+  .menu-card {
+    width: 90%; max-width: 500px; padding: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--neon-blue); border-radius: 30px;
+    box-shadow: 0 0 50px rgba(0, 210, 255, 0.2);
+  }
+  
+  .promotion-card {
+    width: 90%; max-width: 400px; padding: 30px; text-align: center;
+  }
+
+  .promo-pieces {
+    display: flex; justify-content: space-around; margin-top: 20px;
+  }
+  
+  .promo-piece {
+    font-size: 50px; cursor: pointer; padding: 10px; border-radius: 10px;
+    background: rgba(255,255,255,0.1); border: 1px solid transparent;
+    transition: 0.2s;
+  }
+  
+  .promo-piece:hover {
+    background: rgba(0, 210, 255, 0.3); border: 1px solid var(--neon-blue);
+    transform: scale(1.1);
+  }
+
+  .custom-select {
+    width: 100%; padding: 15px; background: #1a1a3a; border: 2px solid var(--neon-blue);
+    border-radius: 12px; color: white; font-family: 'Orbitron', sans-serif;
+    outline: none; margin: 20px 0; cursor: pointer;
+  }
+
+  .loading-container { display: none; margin: 20px 0; }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+    border-top: 4px solid var(--neon-blue); border-radius: 50%;
+    animation: spin 1s linear infinite; margin: 0 auto;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="menu-card">
+    <h3 style="font-family: 'Orbitron'; color: var(--neon-blue);">CHESS PUZZLE</h3>
+    <p style="font-size: 0.9rem; opacity: 0.7;">Engine v3.6 | Multi-Move Sequencing Active</p>
+    
+    <select id="scenarioType" class="custom-select">
+      <option value="mate">TACTICS: CHECKMATE</option>
+      <option value="rated">RATED SURVIVAL (ELO 100+)</option>
+      <option value="fork">TACTICS: FORKS</option>
+      <option value="pin">TACTICS: PINS</option>
+      <option value="material">TACTICS: MATERIAL</option>
+      <option value="mixed">TACTICS: RANDOM MIX</option>
+      <option value="start">VS ENGINE (FREE PLAY)</option>
+    </select>
+
+    <div id="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p id="loadingText" style="margin-top: 10px; font-size: 0.8rem; letter-spacing: 2px;">SYNCHRONIZING VECTORS...</p>
+    </div>
+
+    <button id="initBtn" onclick="startGame()">INITIALIZE PUZZLE</button>
+  </div>
+</div>
+
+<!-- Promotion UI -->
+<div id="promotionOverlay">
+    <div class="menu-card promotion-card">
+        <h3 style="font-family: 'Orbitron'; color: var(--neon-gold); margin-top:0;">SELECT PROTOCOL</h3>
+        <p style="font-size: 0.9rem; opacity: 0.7;">Choose piece for promotion</p>
+        <div class="promo-pieces">
+            <div class="promo-piece piece-w" onclick="completePromotion('q')">♛</div>
+            <div class="promo-piece piece-w" onclick="completePromotion('n')">♞</div>
+            <div class="promo-piece piece-w" onclick="completePromotion('r')">♜</div>
+            <div class="promo-piece piece-w" onclick="completePromotion('b')">♝</div>
+        </div>
+    </div>
+</div>
+
+<h2>♟️ CHESS PUZZLE ARENA</h2>
+
+<div class="main-container">
+  <div class="board-wrapper">
+    <div id="chessboard"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="panel" id="puzzlePanel">
+      <div id="eloContainer" style="display:none">
+        <div class="elo-display" id="userElo">Rating: 100</div>
+        <div class="strike-zone" id="strikes"></div>
+      </div>
+      <div class="status-text" id="feedback">Establishing Uplink...</div>
+      
+      <button onclick="provideHint()" id="hintBtn">💡 Logical Hint / Move</button>
+      <button class="btn-retry" onclick="handleRetry()" id="retryBtn" style="display:none">↺ Reset Position</button>
+      <button class="btn-next" onclick="nextScenario()" id="nextBtn" style="display:none">Next Mission ➡</button>
+    </div>
+    <button class="btn-exit" onclick="exitToDashboard()">⬅ Exit Arena</button>
+  </div>
+</div>
+
+<script>
+function exitToDashboard() { 
+    // Show the setup overlay instead of navigating via href (which throws an error in iframes/blob environments)
+    document.getElementById("overlay").style.display = "flex";
+    document.getElementById("initBtn").style.display = "block";
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("chessboard").style.display = "none";
+    document.getElementById("eloContainer").style.display = "none";
+    document.getElementById("retryBtn").style.display = "none";
+    document.getElementById("nextBtn").style.display = "none";
+    feedback.innerHTML = "Establishing Uplink...";
+    if(game) { game.reset(); }
+}
+
+// --- EXTENDED LOCAL FALLBACK DATABASE ---
+const localPuzzles = {
+  mate: [
+    { id: "m1", fen: "r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R w KQkq - 1 1", solution: ["e5f6", "g7f6", "c4f7"], goal: "Mate in 2", clue: "Henry Buckle vs NN, 1840 | First move: Knight" },
+    { id: "m2", fen: "1rb4r/pkPp3p/1b1P3n/1Q6/N3Pp2/8/P1P3PP/7K w - - 1 1", solution: ["b5d5", "b7a6", "c7b8n"], goal: "Mate in 2", clue: "Louis Paulsen vs Blachy, 1857 | First move: Queen" },
+    { id: "m3", fen: "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 1 1", solution: ["b3b8", "d7b8", "d1d8"], goal: "Mate in 2", clue: "Paul Morphy vs Duke Isouard, 1858 | First move: Queen" },
+    { id: "m4", fen: "r1b2k1r/ppp1bppp/8/1B1Q4/5q2/2P5/PPP2PPP/R3R1K1 w - - 1 1", solution: ["d5d8", "e7d8", "e1e8"], goal: "Mate in 2", clue: "Johannes Zukertort vs Adolf Anderssen, 1865 | First move: Queen" },
+    { id: "m5", fen: "5rkr/pp2Rp2/1b1p1Pb1/3P2Q1/2n3P1/2p5/P4P2/4R1K1 w - - 1 1", solution: ["g5g6", "f7g6", "e7g7"], goal: "Mate in 2", clue: "Gustav Neumann vs Carl Mayet, 1866 | First move: Queen" },
+    { id: "m6", fen: "1r1kr3/Nbppn1pp/1b6/8/6Q1/3B1P2/Pq3P1P/3RR1K1 w - - 1 1", solution: ["g4d7", "d8d7", "d3b5"], goal: "Mate in 2", clue: "Joseph Blackburne vs Martin, 1876 | First move: Queen" },
+    { id: "m7", fen: "5rk1/1p1q2bp/p2pN1p1/2pP2Bn/2P3P1/1P6/P4QKP/5R2 w - - 1 1", solution: ["f2f8", "g7f8", "f1f8"], goal: "Mate in 2", clue: "Wilfried Paulsen vs Adolf Anderssen, 1878 | First move: Queen" },
+    { id: "m8", fen: "r1nk3r/2b2ppp/p3b3/3NN3/Q2P3q/B2B4/P4PPP/4R1K1 w - - 1 1", solution: ["a4d7", "e6d7", "e5f7"], goal: "Mate in 2", clue: "Joseph Blackburne vs Smith, 1882 | First move: Queen" },
+    { id: "m9", fen: "r4br1/3b1kpp/1q1P4/1pp1RP1N/p7/6Q1/PPB3PP/2KR4 w - - 1 1", solution: ["g3g6", "h7g6", "f5g6"], goal: "Mate in 2", clue: "Wilhelm Steinitz vs David Sands, 1887 | First move: Queen" },
+    { id: "m10", fen: "r1b2k1r/ppppq3/5N1p/4P2Q/4PP2/1B6/PP5P/n2K2R1 w - - 1 1", solution: ["h5h6", "h8h6", "g1g8"], goal: "Mate in 2", clue: "Wilhelm Steinitz vs Albert Hodges, 1891 | First move: Queen" },
+    { id: "m11", fen: "r2q1b1r/1pN1n1pp/p1n3k1/4Pb2/2BP4/8/PPP3PP/R1BQ1RK1 w - - 1 1", solution: ["d1g4", "f5g4", "c4f7"], goal: "Mate in 2", clue: "Siegbert Tarrasch vs Fiedler, 1892 | First move: Queen" },
+    { id: "m12", fen: "3q2r1/4n2k/p1p1rBpp/PpPpPp2/1P3P1Q/2P3R1/7P/1R5K w - - 1 1", solution: ["h4h6", "h7h6", "g3h3"], goal: "Mate in 2", clue: "Harry Pillsbury vs Lyons Rodgers, 1893 | First move: Queen" },
+    { id: "m13", fen: "r2qk2r/pb4pp/1n2Pb2/2B2Q2/p1p5/2P5/2B2PPP/RN2R1K1 w - - 1 1", solution: ["f5g6", "h7g6", "c2g6"], goal: "Mate in 2", clue: "Siegbert Tarrasch vs Max Kurschner, 1893 | First move: Queen" },
+    { id: "m14", fen: "6k1/pp4p1/2p5/2bp4/8/P5Pb/1P3rrP/2BRRN1K b - - 0 1", solution: ["g2g1", "h1g1", "f2f1"], goal: "Mate in 2", clue: "James Mason vs Georg Marco, 1894 | First move: Rook" },
+    { id: "m15", fen: "r1b1kb1r/pppp1ppp/5q2/4n3/3KP3/2N3PN/PPP4P/R1BQ1B1R b kq - 0 1", solution: ["f8c5", "d4c5", "f6b6", "c5d5", "b6d6"], goal: "Mate in 3", clue: "Madame de Remusat vs Napoleon I, 1802 | First move: Bishop" },
+    { id: "m16", fen: "r3k2r/ppp2Npp/1b5n/4p2b/2B1P2q/BQP2P2/P5PP/RN5K w kq - 1 1", solution: ["c4b5", "c7c6", "b3e6", "h4e7", "e6e7"], goal: "Mate in 3", clue: "William Evans vs Alexander MacDonnell, 1826 | First move: Bishop" },
+    { id: "m17", fen: "r1b3kr/ppp1Bp1p/1b6/n2P4/2p3q1/2Q2N2/P4PPP/RN2R1K1 w - - 1 1", solution: ["c3h8", "g8h8", "e7f6", "h8g8", "e1e8"], goal: "Mate in 3", clue: "William Evans vs Alexander MacDonnell, 1829 | First move: Queen" },
+    { id: "m18", fen: "r2n1rk1/1ppb2pp/1p1p4/3Ppq1n/2B3P1/2P4P/PP1N1P1K/R2Q1RN1 b - - 0 1", solution: ["f5f2", "f1f2", "f8f2", "h2h1", "h5g3"], goal: "Mate in 3", clue: "H Popert vs John Cochrane, 1841 | First move: Queen" },
+    { id: "m19", fen: "3q1r1k/2p4p/1p1pBrp1/p2Pp3/2PnP3/5PP1/PP1Q2K1/5R1R w - - 1 1", solution: ["h1h7", "h8h7", "f1h1", "h7g7", "d2h6"], goal: "Mate in 3", clue: "Daniel Harrwitz vs Bernhard Horwitz, 1846 | First move: Rook" },
+    { id: "m20", fen: "6k1/ppp2ppp/8/2n2K1P/2P2P1P/2Bpr3/PP4r1/4RR2 b - - 0 1", solution: ["g7g6", "h5g6", "h7g6", "f5f6", "c5d7"], goal: "Mate in 3", clue: "Bernhard Horwitz vs Howard Staunton, 1846 | First move: Pawn" },
+    { id: "m21", fen: "rn3rk1/p5pp/2p5/3Ppb2/2q5/1Q6/PPPB2PP/R3K1NR b - - 0 1", solution: ["c4f1", "e1f1", "f5d3", "f1e1", "f8f1"], goal: "Mate in 3", clue: "J Schulten vs Bernhard Horwitz, 1846 | First move: Queen" },
+    { id: "m22", fen: "N1bk4/pp1p1Qpp/8/2b5/3n3q/8/PPP2RPP/RNB1rBK1 b - - 0 1", solution: ["d4e2", "g1h1", "e2g3", "h1g1", "e1f1"], goal: "Mate in 3", clue: "NN vs Henry Bird, 1850 | First move: Knight" },
+    { id: "m23", fen: "8/2p3N1/6p1/5PB1/pp2Rn4/7k/P1p2K1P/3r4 w - - 1 1", solution: ["e4e3", "h3h2", "g5f4", "h2h1", "e3h3"], goal: "Mate in 3", clue: "Adolf Anderssen vs Ernst Falkbeer, 1851 | First move: Rook" },
+    { id: "m24", fen: "r1b1k1nr/p2p1ppp/n2B4/1p1NPN1P/6P1/3P1Q2/P1P1K3/q5b1 w - - 1 1", solution: ["f5g7", "e8d8", "f3f6", "g8f6", "d6e7"], goal: "Mate in 3", clue: "Adolf Anderssen vs Lionel Kieseritzky, 1851 | First move: Knight" },
+    { id: "m25", fen: "1q2r3/k4p2/prQ2b1p/R7/1PP1B1p1/6P1/P5K1/8 w - - 1 1", solution: ["a5a6", "b6a6", "c6d7", "a6b6", "c4c5"], goal: "Mate in 3", clue: "Adolf Anderssen vs G Lepge, 1855 | First move: Rook" },
+    { id: "m26", fen: "r1bqr1k1/ppp2pp1/3p4/4n1NQ/2B1PN2/8/P4PPP/b4RK1 w - - 1 1", solution: ["h5f7", "e5f7", "c4f7", "g8f8", "f4g6"], goal: "Mate in 3", clue: "Louis Paulsen vs NN, 1857 | First move: Queen" },
+    { id: "m27", fen: "3r4/pp5Q/B7/k7/3q4/2b5/P4PPP/1R4K1 w - - 1 1", solution: ["b1b5", "a5a4", "h7c2", "a4a3", "c2b3"], goal: "Mate in 3", clue: "Paul Morphy vs NN, 1858 | First move: Rook" },
+    { id: "m28", fen: "rnbk1b1r/ppqpnQ1p/4p1p1/2p1N1B1/4N3/8/PPP2PPP/R3KB1R w - - 1 1", solution: ["f7e8", "d8e8", "e4f6", "e8d8", "e5f7"], goal: "Mate in 3", clue: "A Saalbach vs H Pollmaecher, 1861 | First move: Queen" },
+    { id: "m29", fen: "3rnr1k/p1q1b1pB/1pb1p2p/2p1P3/2P2N2/PP4P1/1BQ4P/4RRK1 w - - 1 1", solution: ["f4g6", "h8h7", "g6f8", "h7g8", "c2h7"], goal: "Mate in 3", clue: "Frederic Deacon vs Valentine Green, 1862 | First move: Knight" },
+    { id: "m30", fen: "8/Qp4pk/2p3b1/5p1p/3B3P/1P4P1/P1P1rnBK/3r4 b - - 0 1", solution: ["f2g4", "h2h3", "d1h1", "g2h1", "e2h2"], goal: "Mate in 3", clue: "J Robey vs Adolf Anderssen, 1862 | First move: Knight" },
+    { id: "m31", fen: "k7/1p1rr1pp/pR1p1p2/Q1pq4/P7/8/2P3PP/1R4K1 w - - 1 1", solution: ["b6a6", "b7a6", "a5a6", "d7a7", "a6c8"], goal: "Mate in 3", clue: "Louis Paulsen vs C Bollen, 1863 | First move: Rook" },
+    { id: "m32", fen: "3r1rk1/p1p4p/8/1PP1p1bq/2P5/3N1Pp1/PB2Q3/1R3RK1 b - - 0 1", solution: ["g5e3", "f1f2", "h5h2", "g1f1", "h2h1"], goal: "Mate in 3", clue: "William Steinitz vs Henry Bird, 1866 | First move: Bishop" },
+    { id: "m33", fen: "Q4R2/3kr3/1q3n1p/2p1p1p1/1p1bP1P1/1B1P3P/2PBK3/8 w - - 1 1", solution: ["a8c8", "d7d6", "f8f6", "e7e6", "f6e6"], goal: "Mate in 3", clue: "Joseph Blackburne vs Adolf Anderssen, 1873 | First move: Queen" },
+    { id: "m34", fen: "2rrk3/QR3pp1/2n1b2p/1BB5/3P4/8/P4PPP/6K1 w - - 1 1", solution: ["b7e7", "e8f8", "e7e8", "f8e8", "a7e7"], goal: "Mate in 3", clue: "Joseph Blackburne vs Adolf Schwarz, 1873 | First move: Rook" },
+    { id: "m35", fen: "7k/pbp3bp/3p4/1p5q/3n2p1/5rB1/PP1NrN1P/1Q1BRRK1 b - - 0 1", solution: ["f3g3", "h2g3", "h5h1", "f2h1", "e2g2"], goal: "Mate in 3", clue: "Consultants vs Mikhail Chigorin, 1875 | First move: Rook" },
+    { id: "m36", fen: "3r4/pR2N3/2pkb3/5p2/8/2B5/qP3PPP/4R1K1 w - - 1 1", solution: ["c3e5", "d6c5", "e1c1", "e6c4", "b2b4"], goal: "Mate in 3", clue: "Johannes Zukertort vs William Potter, 1875 | First move: Bishop" },
+    { id: "m37", fen: "5qrk/p3b1rp/4P2Q/5P2/1pp5/5PR1/P6P/B6K w - - 1 1", solution: ["h6h7", "h8h7", "g3h3", "e7h4", "h3h4"], goal: "Mate in 3", clue: "Mikhail Chigorin vs Yakubovich, 1879 | First move: Queen" },
+    { id: "m38", fen: "2q2r2/5rk1/4pNpp/p2pPn2/P1pP2QP/2P2R2/2B3P1/6K1 w - - 1 1", solution: ["g4g6", "g7h8", "c2f5", "e6f5", "g6h6", "f7h7", "h6h7"], goal: "Mate in 4", clue: "James Mason vs Isidor Gunsberg, 1883 | First move: Queen" },
+    { id: "m39", fen: "qr6/1b1p1krQ/p2Pp1p1/4PP2/1p1B1n2/3B4/PP3K1P/2R2R2 w - - 1 1", solution: ["f5g6", "f7f8", "h7h8", "g7g8", "h8f6", "f8e8", "f6e7"], goal: "Mate in 4", clue: "Wilhelm Steinitz vs Charles Maurian, 1883 | First move: Pawn" },
+    { id: "m40", fen: "r6k/pppb1B2/6Q1/8/3P4/2P1q3/PKP3PP/7R w - - 1 1", solution: ["g6f6", "h8h7", "f7g6", "h7g8", "f6f7", "g8h8", "f7h7"], goal: "Mate in 4", clue: "Amos Burn vs F Braund, 1887 | First move: Queen" },
+    { id: "m41", fen: "rnb3kr/ppp2ppp/1b6/3q4/3pN3/Q4N2/PPP2KPP/R1B1R3 w - - 1 1", solution: ["e4f6", "g7f6", "a3f8", "g8f8", "c1h6", "f8g8", "e1e8"], goal: "Mate in 4", clue: "Richardson vs Eugene Delmar, 1887 | First move: Knight" },
+    { id: "m42", fen: "3q1rk1/4bp1p/1n2P2Q/1p1p1p2/6r1/Pp2R2N/1B1P2PP/7K w - - 1 1", solution: ["h3g5", "g4g5", "e3h3", "f8e8", "h6h7", "g8f8", "h7f7"], goal: "Mate in 4", clue: "William Pollock vs Francis Lee, 1888 | First move: Knight" },
+    { id: "m43", fen: "3r1r1k/q2n3p/b1p2ppQ/p1n1p3/Pp2P3/1B1PBR2/1PPN2PP/R5K1 w - - 1 1", solution: ["h6h7", "h8h7", "f3h3", "h7g7", "e3h6", "g7h7", "h6f8"], goal: "Mate in 4", clue: "Joseph Blackburne vs James Hanham, 1889 | First move: Queen" },
+    { id: "m44", fen: "1rb2r1k/pp1p2pp/5n1N/8/P7/1Q6/1PP3PP/4R2K w - - 1 1", solution: ["e1e8", "g7g6", "b3f7", "f6g8", "f7g8", "f8g8", "e8g8"], goal: "Mate in 4", clue: "Siegbert Tarrasch vs Arthur Kurschner, 1889 | First move: Rook" },
+    { id: "m45", fen: "5rbk/2pq3p/5PQR/p7/3p3R/1P4N1/P5PP/6K1 w - - 1 1", solution: ["g3f5", "f8f7", "h4g4", "d7e8", "g6g7", "f7g7", "f6g7"], goal: "Mate in 4", clue: "Max Judd vs Dion Martinez, 1889 | First move: Knight" },
+    { id: "m46", fen: "r2q1rk1/ppp1n1p1/1b1p1p2/1B1N2BQ/3pP3/2P3P1/PP3P2/R5K1 w - - 1 1", solution: ["b5c4", "e7d5", "c4d5", "f8f7", "h5f7", "g8h7", "f7h5"], goal: "Mate in 4", clue: "Siegbert Tarrasch vs Jean Taubenhaus, 1892 | First move: Bishop" },
+    { id: "m47", fen: "r2q3r/ppp5/2n4p/4Pbk1/2BP1Npb/P2QB3/1PP3P1/R5K1 w - - 1 1", solution: ["d3f5", "g5f5", "c4d3", "f5g5", "f4e6", "g5h5", "e6g7"], goal: "Mate in 4", clue: "Geza Maroczy vs Gyozo Exner, 1894 | First move: Queen" },
+    { id: "m48", fen: "1rb3k1/ppN2R1p/2n1P1p1/6p1/6B1/8/PPP3PP/6K1 w - - 1 1", solution: ["c7d5", "c8e6", "g4e6", "g8h8", "d5f6", "c6e5", "f7h7"], goal: "Mate in 4", clue: "Fraser vs Farrow, 1896 | First move: Knight" },
+    { id: "m49", fen: "3k1r2/2pb4/2p3P1/2Np1p2/1P6/4nN1R/2P1q3/Q5K1 w - - 1 1", solution: ["c5b7", "d8e7", "a1g7", "e7e8", "g7e5", "d7e6", "e5e6"], goal: "Mate in 4", clue: "Marco & Schlechter vs Charousek & allies, 1897 | First move: Knight" },
+    { id: "m50", fen: "2k5/p1p1q3/2P3p1/3QP3/7p/7P/1PK3P1/8 w - - 1 1", solution: ["d5g8", "e7d8", "g8e6", "c8b8", "e6b3", "b8c8", "b3b7"], goal: "Mate in 4", clue: "Joseph Blackburne vs Herbert Trenchard, 1898 | First move: Queen" },
+    { id: "m51", fen: "2k4r/ppp2p2/2b2B2/7p/6pP/2P1q1bP/PP3N2/R4QK1 b - - 0 1", solution: ["g3h2", "g1h2", "e3f4", "h2g1", "f4g3", "f1g2", "g3g2"], goal: "Mate in 4", clue: "A Giese vs Alexander Alekhine, 1905 | First move: Bishop" },
+    { id: "m52", fen: "rnbq1rk1/pp2bp1p/4p1p1/2pp2Nn/5P1P/1P1BP3/PBPP2P1/RN1QK2R w - - 1 1", solution: ["d1h5", "e7g5", "h5h7", "g8h7", "h4g5", "h7g8", "h1h8"], goal: "Mate in 4", clue: "Cook vs A Mueller, 1906 | First move: Queen" },
+    { id: "m53", fen: "2r2r2/7k/5pRp/5q2/3p1P2/6QP/P2B1P1K/6R1 w - - 1 1", solution: ["g6h6", "h7h6", "g3h4", "f5h5", "f4f5", "h6h7", "h4h5"], goal: "Mate in 4", clue: "Franz Jacob vs Jacques Mieses, 1908 | First move: Rook" },
+    { id: "m54", fen: "5r2/pq4k1/1pp1Qn2/2bp1PB1/3R1R2/2P3P1/P6P/6K1 w - - 1 1", solution: ["g5f6", "f8f6", "f4g4", "g7h7", "e6g8", "h7h6", "g4h4"], goal: "Mate in 4", clue: "Akiba Rubinstein vs Rudolf Spielmann, 1908 | First move: Bishop" }
+  ],
+  fork: [
+    {id:"f1", fen:"8/8/3k4/8/4P3/2N5/8/4K3 w - - 0 1", solution:["c3b5"], goal:"Find the Knight Fork", clue:"Which square hits K and space?"},
+    {id:"f2", fen:"3q2k1/p4ppp/8/3N4/8/8/5PPP/3R2K1 w - - 0 1", solution:["d5e7"], goal:"Royal Fork Surprise", clue:"Check the king and win the Queen."}
+  ],
+  pin: [
+    {id:"p1", fen:"r1b1k1nr/pppp1ppp/2n5/2b1p3/2B1P3/2N5/PPPP1PPP/R1B1K1NR w KQkq - 4 5", solution:["c3d5"], goal:"Pressure the Pinned Piece", clue:"Add an attacker to the center."},
+    {id:"p2", fen:"4k3/8/8/8/1r6/8/1B6/1K6 w - - 0 1", solution:["b1c2"], goal:"The X-Ray Attack", clue:"Align your King and Bishop."}
+  ],
+  material: [
+    {id:"mt1", fen:"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", solution:["d2d4"], goal:"Opening Advantage", clue:"Challenge the center immediately."},
+    {id:"mt2", fen:"8/8/8/3r4/4K3/8/8/8 w - - 0 1", solution:["e4d5"], goal:"Free Piece", clue:"Capture the hanging Rook."}
+  ]
+};
+
+const apiKey = ""; 
+let game = null, currentPuzzle = null, selectedSquare = null;
+let userElo = 100, strikes = 0, moveHistory = [], boardOrientation = 'white', isProcessing = false;
+let hintState = 0; 
+let playedIds = new Set();
+let pendingPromotionMove = null;
+
+const boardDiv = document.getElementById("chessboard"), feedback = document.getElementById("feedback");
+
+const pieceMap = {
+  'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+  'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+};
+
+const pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+
+async function callGemini(prompt) {
+  if (!apiKey) throw new Error("MISSING_KEY");
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt + " Unique Seed: " + Math.random() }] }],
+      systemInstruction: { parts: [{ text: "You are a Chess Grandmaster. Generate UNIQUE puzzles. Initial FEN must be legal. The solution MUST alternate [Player Move, AI Response, Player Move]. Output UCI notation (e.g. c4f7, c7b8n)." }] },
+      generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+              type: "OBJECT",
+              properties: {
+                  fen: { type: "STRING" },
+                  solution: { type: "ARRAY", items: { type: "STRING" } },
+                  goal: { type: "STRING" },
+                  clue: { type: "STRING" }
+              },
+              required: ["fen", "solution", "goal", "clue"]
+          }
+      }
+    })
+  });
+  if (!response.ok) throw new Error("API_FAIL");
+  const data = await response.json();
+  return JSON.parse(data.candidates[0].content.parts[0].text);
+}
+
+async function startGame() {
+  const type = document.getElementById("scenarioType").value;
+  document.getElementById("initBtn").style.display = "none";
+  document.getElementById("loading").style.display = "block";
+  isProcessing = true;
+  playedIds.clear(); 
+
+  try {
+    if (type === 'start') {
+        game = new Chess(); currentPuzzle = null; boardOrientation = 'white';
+        feedback.innerHTML = "Standard Mission Active. AI Engine ready.";
+        isProcessing = false;
+        document.getElementById("overlay").style.display = "none";
+        boardDiv.style.display = "grid";
+        renderBoard();
+    } else {
+        await loadNewPuzzle(type);
+        document.getElementById("overlay").style.display = "none";
+        boardDiv.style.display = "grid";
+        if (type === 'rated') document.getElementById("eloContainer").style.display = "block";
+        renderBoard();
+    }
+  } catch (e) {
+    loadFallback(type);
+    document.getElementById("overlay").style.display = "none";
+    boardDiv.style.display = "grid";
+    if (type === 'rated') document.getElementById("eloContainer").style.display = "block";
+    renderBoard();
+  }
+}
+
+function loadFallback(category) {
+    const pool = category === 'mixed' ? [...localPuzzles.mate, ...localPuzzles.fork, ...localPuzzles.pin] : (localPuzzles[category] || localPuzzles.mate);
+    let unplayed = pool.filter(p => !playedIds.has(p.id));
+    if (unplayed.length === 0) { playedIds.clear(); unplayed = pool; }
+    
+    currentPuzzle = unplayed[Math.floor(Math.random() * unplayed.length)];
+    playedIds.add(currentPuzzle.id);
+    
+    game = new Chess(currentPuzzle.fen);
+    moveHistory = [];
+    hintState = 0;
+    boardOrientation = game.turn() === 'w' ? 'white' : 'black';
+    feedback.innerHTML = `<span style="color:var(--neon-blue)">MISSION:</span> ${currentPuzzle.goal}`;
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("nextBtn").style.display = "none";
+    document.getElementById("retryBtn").style.display = "none";
+    renderBoard();
+    isProcessing = false; 
+}
+
+async function loadNewPuzzle(type) {
+  isProcessing = true;
+  feedback.innerText = "Scanning neural vectors...";
+  const prompt = `Generate a fresh, unique ${type} puzzle for Elo ${userElo}. Side to move: ${userElo > 1200 ? 'Black' : 'White'}. Include multi-move sequence if possible.`;
+  try {
+    const data = await callGemini(prompt);
+    currentPuzzle = data;
+    game = new Chess(data.fen);
+    moveHistory = [];
+    hintState = 0;
+    boardOrientation = game.turn() === 'w' ? 'white' : 'black';
+    document.getElementById("retryBtn").style.display = "none";
+    document.getElementById("nextBtn").style.display = "none";
+    feedback.innerHTML = `<span style="color:var(--neon-blue)">GOAL:</span> ${data.goal}`;
+    renderBoard();
+    isProcessing = false;
+  } catch(e) {
+      loadFallback(type);
+  }
+}
+
+function renderBoard() {
+  boardDiv.innerHTML = "";
+  const boardArr = game.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      let aR = boardOrientation === 'white' ? r : 7 - r;
+      let aC = boardOrientation === 'white' ? c : 7 - c;
+      const piece = boardArr[aR][aC];
+      const code = String.fromCharCode(97 + aC) + (8 - aR);
+      const sq = document.createElement("div");
+      sq.className = `square ${(aR + aC) % 2 === 0 ? "white-sq" : "black-sq"}`;
+      sq.dataset.square = code;
+      
+      if (c === 0) { const l = document.createElement("span"); l.className="coord rank-label"; l.innerText = 8-aR; sq.appendChild(l); }
+      if (r === 7) { const l = document.createElement("span"); l.className="coord file-label"; l.innerText = String.fromCharCode(97+aC); sq.appendChild(l); }
+
+      if (piece) {
+        const p = document.createElement("span");
+        p.className = piece.color === 'w' ? 'piece-w' : 'piece-b';
+        p.textContent = pieceMap[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+        sq.appendChild(p);
+      }
+      sq.onclick = () => handleSquareClick(code);
+      boardDiv.appendChild(sq);
+    }
+  }
+  if (game.in_check()) highlightKing(game.turn());
+}
+
+function highlightKing(color) {
+  const squares = Array.from(boardDiv.children);
+  const b = game.board();
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++)
+    if (b[r][c]?.type === 'k' && b[r][c]?.color === color) {
+        const code = String.fromCharCode(97+c)+(8-r);
+        const target = squares.find(s => s.dataset.square === code);
+        if (target) target.classList.add("in-check");
+    }
+}
+
+function checkPromotionIntent(from, to) {
+    const piece = game.get(from);
+    if (!piece || piece.type !== 'p') return false;
+    const targetRank = to[1];
+    if (targetRank !== '1' && targetRank !== '8') return false;
+    
+    // Verify it's a pseudo legal move that demands promotion
+    const moves = game.moves({ verbose: true });
+    return moves.some(m => m.from === from && m.to === to && m.promotion);
+}
+
+function handleSquareClick(code) {
+  if (isProcessing) return;
+  if (selectedSquare) {
+    if (selectedSquare === code) { deselect(); return; }
+    
+    // Check if the move requires promotion selection
+    if (checkPromotionIntent(selectedSquare, code)) {
+        pendingPromotionMove = { from: selectedSquare, to: code };
+        document.getElementById("promotionOverlay").style.display = "flex";
+        
+        // Update styling colors for pieces based on turn
+        const isWhite = game.turn() === 'w';
+        document.querySelectorAll('.promo-piece').forEach(el => {
+            el.className = `promo-piece ${isWhite ? 'piece-w' : 'piece-b'}`;
+        });
+        return;
+    }
+    
+    executeMove({ from: selectedSquare, to: code });
+  } else {
+    const p = game.get(code);
+    if (p?.color === game.turn()) selectSquare(code);
+  }
+}
+
+function completePromotion(pieceType) {
+    document.getElementById("promotionOverlay").style.display = "none";
+    if (pendingPromotionMove) {
+        pendingPromotionMove.promotion = pieceType;
+        executeMove(pendingPromotionMove);
+        pendingPromotionMove = null;
+    }
+}
+
+function executeMove(moveObj) {
+  const m = game.move(moveObj);
+  if (m) {
+      renderBoard();
+      let moveString = moveObj.from + moveObj.to + (moveObj.promotion || '');
+      if (currentPuzzle) validatePuzzleMove(moveString);
+      else handleEngineTurn();
+      deselect();
+  } else {
+      const p = game.get(moveObj.to);
+      if (p?.color === game.turn()) { deselect(); selectSquare(moveObj.to); } else deselect();
+  }
+}
+
+function selectSquare(code) {
+  selectedSquare = code;
+  const target = Array.from(boardDiv.children).find(s => s.dataset.square === code);
+  if (target) target.classList.add("selected");
+  game.moves({ square: code, verbose: true }).forEach(m => {
+    const dest = Array.from(boardDiv.children).find(s => s.dataset.square === m.to);
+    if (dest) { dest.classList.add("highlight"); if (game.get(m.to)) dest.classList.add("capture"); }
+  });
+}
+
+function deselect() {
+  selectedSquare = null;
+  Array.from(boardDiv.children).forEach(s => s.classList.remove("selected", "highlight", "capture"));
+}
+
+function validatePuzzleMove(userMoveString) {
+  const expectedMove = currentPuzzle.solution[moveHistory.length];
+  
+  // Accept if it exactly matches the expected UCI string OR if it forces mate directly
+  if (userMoveString === expectedMove || game.in_checkmate()) {
+    moveHistory.push(userMoveString);
+    hintState = 0;
+    
+    // Check if puzzle is fully completed
+    if (game.in_checkmate() || moveHistory.length === currentPuzzle.solution.length) {
+        handleSuccess();
+    } else {
+        // Trigger Opponent's Forced Response
+        isProcessing = true;
+        feedback.innerHTML = "<span style='color:var(--success)'>Move accepted.</span> Opponent responding...";
+        
+        setTimeout(() => {
+            const aiMoveString = currentPuzzle.solution[moveHistory.length];
+            if (aiMoveString) {
+                let aiMoveObj = { from: aiMoveString.substring(0,2), to: aiMoveString.substring(2,4) };
+                if (aiMoveString.length === 5) aiMoveObj.promotion = aiMoveString[4];
+                
+                game.move(aiMoveObj);
+                moveHistory.push(aiMoveString);
+                renderBoard();
+                
+                feedback.innerHTML = `<span>Opponent played <b>${aiMoveString}</b>.</span> Your turn.`;
+                
+                // If the AI move happens to end the solution sequence
+                if(moveHistory.length === currentPuzzle.solution.length) {
+                    handleSuccess();
+                }
+            }
+            isProcessing = false;
+        }, 700); // Small delay for realism
+    }
+  } else { handleFail(userMoveString.substring(2,4)); }
+}
+
+function handleEngineTurn() {
+    if (game.game_over()) return;
+    isProcessing = true;
+    feedback.innerText = "Engine thinking...";
+    setTimeout(() => {
+        const best = getBestMove();
+        if (best) game.move(best);
+        renderBoard();
+        isProcessing = false;
+        if (game.in_checkmate()) feedback.innerHTML = "<span class='fail'>CHECKMATE. AI Victory.</span>";
+    }, 500);
+}
+
+function provideHint() {
+    if (!currentPuzzle) return;
+    const isRated = document.getElementById("scenarioType").value === 'rated';
+    const currentSol = currentPuzzle.solution[moveHistory.length];
+    
+    if (isRated) {
+        feedback.innerHTML = `<span style='color:var(--neon-blue)'>ADVISORY:</span> ${currentPuzzle.clue}`;
+    } else {
+        if (hintState === 0) {
+            feedback.innerHTML = `<span style='color:var(--neon-blue)'>ADVISORY:</span> ${currentPuzzle.clue}`;
+            hintState = 1;
+        } else if (currentSol) {
+            let promoText = currentSol.length === 5 ? ` (Promote to ${currentSol[4].toUpperCase()})` : '';
+            feedback.innerHTML = `<span style='color:var(--neon-gold)'>MOVE REVEALED:</span> Play <b>${currentSol.substring(0,2)}</b> to <b>${currentSol.substring(2,4)}</b>${promoText}.`;
+        }
+    }
+}
+
+function handleSuccess() {
+  feedback.innerHTML = `<span class='success' style='font-family:Orbitron'> MISSION SUCCESSFUL!</span><br/>Objective Neutralized.`;
+  if (document.getElementById("scenarioType").value === 'rated') { userElo += 25; updateEloUI(); }
+  document.getElementById("nextBtn").style.display = "block";
+  isProcessing = false;
+}
+
+function handleFail(sq) {
+  isProcessing = true;
+  feedback.innerHTML = `<span class='fail'>CRITICAL ERROR!</span><br/>Position reset.`;
+  const target = Array.from(boardDiv.children).find(s => s.dataset.square === sq);
+  if (target) target.classList.add("wrong-move");
+  
+  if (document.getElementById("scenarioType").value === 'rated') {
+      strikes++;
+      userElo = Math.max(100, userElo - 20);
+      updateEloUI();
+      if (strikes >= 3) {
+          document.getElementById("retryBtn").innerText = "RESTART ARENA (ELO RESET)";
+          document.getElementById("retryBtn").style.display = "block";
+          return;
+      }
+  }
+  document.getElementById("retryBtn").style.display = "block";
+  
+  // Undo the wrong move
+  setTimeout(() => { 
+      if(game.history().length > 0) game.undo(); 
+      renderBoard(); 
+      isProcessing = false; 
+      feedback.innerHTML = "Awaiting your move...";
+  }, 1000);
+}
+
+function updateEloUI() {
+  document.getElementById("userElo").innerText = `Rating: ${userElo}`;
+  let str = ""; for (let i=0; i<strikes; i++) str += "❌ ";
+  document.getElementById("strikes").innerText = str;
+}
+
+function handleRetry() {
+  if (document.getElementById("scenarioType").value === 'rated' && strikes >= 3) {
+      userElo = 100; strikes = 0;
+      updateEloUI();
+      document.getElementById("retryBtn").innerText = "↺ Reset Position";
+      nextScenario();
+  } else {
+      // Complete reset to initial FEN state based on puzzle
+      game = new Chess(currentPuzzle.fen);
+      
+      // If AI goes first in the puzzle (rare, but good for robust code), we'd handle it here
+      moveHistory = [];
+      renderBoard();
+      feedback.innerHTML = `<span style="color:var(--neon-blue)">MISSION:</span> ${currentPuzzle.goal}`;
+      document.getElementById("retryBtn").style.display = "none";
+      isProcessing = false;
+  }
+}
+
+async function nextScenario() { 
+    const type = document.getElementById("scenarioType").value;
+    isProcessing = true;
+    document.getElementById("nextBtn").style.display = "none";
+    try {
+        if(apiKey) await loadNewPuzzle(type);
+        else loadFallback(type);
+    } catch(e) { loadFallback(type); }
+}
+
+function getBestMove() {
+  let moves = game.moves(); if (moves.length === 0) return null;
+  let bestMove = null, bestValue = game.turn() === 'w' ? -Infinity : Infinity;
+  for (let m of moves) {
+    game.move(m); 
+    let val = evaluateBoard(); game.undo();
+    if (game.turn() === 'w' ? (val > bestValue) : (val < bestValue)) { bestValue = val; bestMove = m; }
+  }
+  return bestMove;
+}
+function evaluateBoard() {
+    let eval = 0;
+    game.board().forEach(row => row.forEach(p => { if(p) eval += (p.color === 'w' ? pieceValues[p.type] : -pieceValues[p.type]); }));
+    return eval;
+}
+</script>
+</body>
+</html>
