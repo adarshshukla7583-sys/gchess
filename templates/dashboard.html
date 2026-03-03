@@ -117,11 +117,15 @@
     font-weight: bold;
     color: #1a1a1a;
     font-size: 1.2rem;
+    flex-shrink: 0;
   }
 
   .user-info h4 {
     font-size: 1rem;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .user-info span {
@@ -159,7 +163,7 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     width: 100%;
-    max-width: 1200px; /* Increased to accommodate more cards */
+    max-width: 1200px;
     margin-bottom: 40px;
   }
 
@@ -261,27 +265,73 @@
   @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Responsive Design */
+  /* Responsive Design - Mobile Bottom Navigation */
   @media (max-width: 768px) {
-    .sidebar {
-      width: 70px;
-      padding: 20px 10px;
+    body {
+      padding-bottom: 70px; /* Space for bottom nav */
     }
-    .logo span, .nav-links span, .user-info {
-      display: none;
+    .sidebar {
+      width: 100%;
+      height: 70px;
+      flex-direction: row;
+      bottom: 0;
+      top: auto;
+      padding: 0;
+      border-right: none;
+      border-top: 1px solid #444;
+      justify-content: center;
+    }
+    .logo, .user-profile {
+      display: none; /* Hide logo and profile on mobile nav */
+    }
+    .nav-links {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links li {
+      margin: 0;
+      flex: 1;
+    }
+    .nav-links a {
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 0;
+      font-size: 0.65rem;
+      border-radius: 0;
+      justify-content: center;
+    }
+    .nav-links a.active {
+      border-left: none;
+      border-bottom: 3px solid #d4af37;
+      background: rgba(212, 175, 55, 0.1);
+    }
+    .nav-links a:hover {
+      transform: none;
+    }
+    .nav-links i {
+      font-size: 1.2rem;
     }
     .main-content {
-      margin-left: 70px;
+      margin-left: 0;
       padding: 20px;
     }
-    .logo i { font-size: 1.5rem; }
-    .nav-links a { justify-content: center; padding: 15px; }
+    h1.page-title {
+      font-size: 2rem;
+      margin-bottom: 25px;
+    }
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
+  <!-- Sidebar / Bottom Nav -->
   <aside class="sidebar">
     <div class="logo">
       <i class="fa-solid fa-chess-knight"></i>
@@ -304,25 +354,25 @@
       <li>
         <a href="/chess/1">
           <i class="fa-solid fa-chess-board"></i>
-          <span>Local PvP</span>
+          <span>PvP</span>
         </a>
       </li>
       <li>
         <a href="/chess/5">
           <i class="fa-solid fa-globe"></i>
-          <span>Online Arena</span>
+          <span>Online</span>
         </a>
       </li>
       <li>
         <a href="/chess/2">
           <i class="fa-solid fa-robot"></i>
-          <span>Vs Engine</span>
+          <span>Engine</span>
         </a>
       </li>
       <li>
         <a href="/chess/4">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
-          <span>Analysis</span>
+          <span>Analyze</span>
         </a>
       </li>
     </ul>
@@ -344,7 +394,6 @@
 
     <div class="dashboard-grid">
       
-      <!-- NEW: Online Multiplayer Card -->
       <div class="card">
         <i class="fa-solid fa-globe card-icon"></i>
         <a href="/chess/5">

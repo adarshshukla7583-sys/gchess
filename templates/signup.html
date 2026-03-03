@@ -21,7 +21,6 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    /* Colorful modern gradient background */
     background: linear-gradient(135deg, #FF6B6B 0%, #556270 100%);
     padding: 20px;
   }
@@ -34,23 +33,40 @@
     width: 100%;
     max-width: 400px;
     text-align: center;
-    /* Deep, soft shadow for a floating effect */
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    
-    /* Initial state for entrance animation */
     opacity: 0;
     transform: translateY(40px) scale(0.95);
-    /* Applying the smooth entrance animation */
     animation: popUpSmooth 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
   }
 
-  /* Heading Style */
   h2 {
-    color: #333;
     font-weight: 600;
     font-size: 2rem;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     color: #556270;
+  }
+
+  /* --- Small Error Pop Animation --- */
+  .error-pop {
+    background: #fff0f0;
+    color: #e74c3c;
+    padding: 12px 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #ffcccc;
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.15);
+    animation: popIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
 
   /* --- Input Field Styles --- */
@@ -59,26 +75,23 @@
     padding: 15px 20px;
     margin-bottom: 20px;
     border: 2px solid #eee;
-    border-radius: 50px; /* "Pill" shape rounded corners */
+    border-radius: 50px;
     font-size: 1rem;
     background-color: #f9f9f9;
     outline: none;
-    /* Smooth transition for all interactions */
     transition: all 0.3s ease-in-out;
   }
 
-  /* Style for input placeholders */
   form input::placeholder {
     color: #aaa;
     font-weight: 400;
   }
 
-  /* Smooth Animation when input is focused */
   form input:focus {
-    border-color: #FF6B6B; /* Highlights with the theme color */
+    border-color: #FF6B6B;
     background-color: #fff;
     box-shadow: 0 5px 15px rgba(255, 107, 107, 0.15);
-    transform: scale(1.02); /* Subtle expansion effect */
+    transform: scale(1.02);
   }
 
   /* --- Button Styles --- */
@@ -87,35 +100,42 @@
     padding: 15px;
     border: none;
     border-radius: 50px;
-    /* Gradient matching the background */
     background: linear-gradient(to right, #FF6B6B, #874f5f);
     color: white;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
-    /* Smooth transition for hover */
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
   }
 
-  /* Smooth Animation on Button Hover */
   form button:hover {
-    transform: translateY(-5px); /* Lifts up */
-    box-shadow: 0 15px 30px rgba(255, 107, 107, 0.5); /* Shadow grows bigger */
-    background: linear-gradient(to right, #ff8585, #a35f72); /* Slightly brighter gradient */
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(255, 107, 107, 0.5);
+    background: linear-gradient(to right, #ff8585, #a35f72);
   }
 
-  /* Click effect */
   form button:active {
     transform: scale(0.98);
   }
 
-  /* --- Keyframes definition for Entrance Animation --- */
+  /* --- Link Styles --- */
+  a {
+    display: inline-block;
+    margin-top: 25px;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+  }
+
+  a:hover {
+    color: #FF6B6B;
+    text-decoration: underline;
+  }
+
   @keyframes popUpSmooth {
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 </style>
 </head>
@@ -124,9 +144,19 @@
   <div class="signup-card">
     <form method="post">
       <h2>Create Account</h2>
+      
+      <!-- Nicely Designed Error Pop -->
+      {% if error %}
+      <div class="error-pop">
+        ⚠️ {{ error }}
+      </div>
+      {% endif %}
+      
       <input name="username" type="text" placeholder="Username" required>
       <input name="password" type="password" placeholder="Password" required>
       <button type="submit">Sign Up</button>
+      
+      <a href="/">Already have an account? Log in</a>
     </form>
   </div>
 

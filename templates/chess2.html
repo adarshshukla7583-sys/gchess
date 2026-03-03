@@ -9,6 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
 <style>
+  :root {
+    /* Slightly reduced to accommodate the evaluation bar on mobile */
+    --board-size: min(88vw, 480px);
+    --sq-size: calc(var(--board-size) / 8);
+  }
+
   /* --- 1. Global Settings & Background --- */
   body {
     background: radial-gradient(circle at center, #1b2030 0%, #0e0e15 100%);
@@ -21,11 +27,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    padding: 10px;
+    box-sizing: border-box;
   }
 
   h2 {
-    font-size: 2.5rem;
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
     margin-bottom: 20px;
     text-shadow: 0 4px 10px rgba(0,0,0,0.5);
     animation: slideDown 0.8s ease-out;
@@ -34,7 +42,7 @@
 
   /* --- 2. Modals (Rules & Game Over) --- */
   .modal {
-    width: 90%;
+    width: 95%;
     max-width: 450px;
     background: rgba(30, 40, 60, 0.95);
     backdrop-filter: blur(15px);
@@ -46,51 +54,67 @@
     position: absolute;
     z-index: 50;
     transition: all 0.3s ease;
+    box-sizing: border-box;
   }
 
-  .modal h3 { 
-    color: #fff; 
-    margin-top: 0; 
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-  }
-  
+  .modal h3 { color: #fff; margin-top: 0; font-size: 1.8rem; margin-bottom: 10px; }
   .modal p { color: #ccc; line-height: 1.6; margin-bottom: 20px; }
   .modal ul { text-align: left; padding-left: 20px; color: #bbb; margin-bottom: 25px; }
 
-  /* Specific styles for Game Over Modal */
   #gameOverModal { display: none; transform: scale(0.9); opacity: 0; }
   #gameOverModal.show { display: block; transform: scale(1); opacity: 1; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
   
-  .win-text { color: #4ade80; } /* Green */
-  .lose-text { color: #f87171; } /* Red */
-  .draw-text { color: #fbbf24; } /* Yellow */
+  .win-text { color: #4ade80; }
+  .lose-text { color: #f87171; }
+  .draw-text { color: #fbbf24; }
 
-  /* Selector Styling */
   .option-group { margin: 15px 0; text-align: left; }
   
   select {
-    width: 100%;
-    padding: 12px;
-    background: #20253a;
-    border: 1px solid #4b7399;
-    border-radius: 8px;
-    color: white;
-    font-family: 'Roboto', sans-serif;
-    font-size: 1rem;
-    outline: none;
-    cursor: pointer;
+    width: 100%; padding: 12px; background: #20253a; border: 1px solid #4b7399;
+    border-radius: 8px; color: white; font-family: 'Roboto', sans-serif;
+    font-size: 1rem; outline: none; cursor: pointer; box-sizing: border-box;
   }
   select:focus { border-color: #f5f682; }
 
-  /* --- 3. The Chess Board --- */
+  .toggle-label {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #20253a; padding: 12px 15px; border-radius: 8px; border: 1px solid #4b7399;
+    cursor: pointer; color: #ccc; font-weight: 500; font-size: 1rem; margin-top: 15px;
+  }
+
+  input[type="checkbox"] {
+    width: 18px; height: 18px; cursor: pointer; accent-color: #4ade80;
+  }
+
+  /* --- 3. Main Layout & Evaluation Bar --- */
+  .main-layout {
+    display: none; /* hidden until start */
+    align-items: stretch;
+    justify-content: center;
+    gap: 15px;
+    margin: 10px auto;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .eval-container {
+    width: 25px; 
+    background: #444; border-radius: 4px; overflow: hidden; position: relative;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
+    display: none; /* hidden by default based on user toggle */
+  }
+  .eval-fill { width: 100%; height: 50%; background: #f2f4f7; position: absolute; bottom: 0; left: 0; transition: height 0.5s ease-out; }
+  .eval-text { position: absolute; width: 100%; text-align: center; font-size: 10px; font-weight: bold; z-index: 2; top: 5px; }
+  .eval-text.white-side { top: auto; bottom: 5px; color: #333; }
+  .eval-text.black-side { color: #fff; }
+
+  /* --- 4. The Chess Board --- */
   #chessboard {
-    width: 480px;
-    height: 480px;
-    margin: 20px auto;
-    display: none; /* Hidden until start */
+    width: var(--board-size);
+    height: var(--board-size);
+    display: grid;
     grid-template-columns: repeat(8, 1fr);
-    
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
@@ -98,26 +122,23 @@
     position: relative;
   }
 
-  /* Visual cue when AI is thinking */
   .thinking-mode {
     cursor: wait;
     box-shadow: 0 0 25px rgba(255, 107, 107, 0.5) !important;
     transition: box-shadow 0.3s;
   }
 
-  /* --- 4. Squares & Colors --- */
+  /* --- 5. Squares & Colors --- */
   .square {
-    width: 60px; height: 60px;
+    width: var(--sq-size); height: var(--sq-size);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; position: relative;
-    font-size: 42px; user-select: none;
+    font-size: calc(var(--sq-size) * 0.7); user-select: none;
   }
 
-  /* Tournament Blue Theme */
   .white { background-color: #f2f4f7; color: #6390b5; }
   .black { background-color: #6390b5; color: #f2f4f7; }
 
-  /* Coordinates */
   .coord {
     position: absolute; font-size: 10px; font-weight: bold;
     pointer-events: none; opacity: 0.8; font-family: sans-serif;
@@ -127,54 +148,30 @@
   .white .coord { color: #6390b5; }
   .black .coord { color: #f2f4f7; }
 
-  /* --- 5. Pieces --- */
-  .piece-anim {
-    display: inline-block;
-    animation: piecePop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.275);
-    z-index: 2;
-  }
+  /* --- 6. Pieces --- */
+  .piece-anim { display: inline-block; animation: piecePop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.275); z-index: 2; }
+  .piece-white { color: #ffffff !important; filter: drop-shadow(0 0 1px #000) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .piece-black { color: #000000 !important; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
 
-  .piece-white {
-    color: #ffffff !important;
-    filter: drop-shadow(0 0 1px #000) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-  }
-  
-  .piece-black {
-    color: #000000 !important;
-    filter: drop-shadow(0 0 1px #fff) drop-shadow(0 1px 2px rgba(0,0,0,0.3));
-  }
-
-  /* --- 6. Interaction --- */
-  .selected {
-    background-color: #f5f682 !important;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-  }
-
-  /* Move Indicators */
+  /* --- 7. Interaction --- */
+  .selected { background-color: #f5f682 !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
   .highlight { position: relative; }
-  
   .highlight::after {
-    content: ''; position: absolute; width: 18px; height: 18px;
+    content: ''; position: absolute; width: 25%; height: 25%;
     background: rgba(0, 0, 0, 0.15); border-radius: 50%;
   }
   .black.highlight::after { background: rgba(0, 0, 0, 0.25); }
-
   .highlight.capture::after {
-    background: transparent; width: 54px; height: 54px;
-    border: 5px solid rgba(0, 0, 0, 0.15); border-radius: 50%;
+    background: transparent; width: 80%; height: 80%;
+    border: clamp(2px, 0.5vw, 4px) solid rgba(0, 0, 0, 0.15); border-radius: 50%;
   }
-  
-  .in-check {
-    background: radial-gradient(circle, #ff6b6b 0%, transparent 80%) !important;
-  }
+  .in-check { background: radial-gradient(circle, #ff6b6b 0%, transparent 80%) !important; }
 
-  /* --- 7. UI Elements --- */
+  /* --- 8. UI Elements --- */
   button {
     padding: 12px 24px; font-size: 16px; font-weight: bold;
-    color: white; background: #4b7399;
-    border: none; border-radius: 8px; cursor: pointer;
-    box-shadow: 0 4px 0 #2a405e; transition: transform 0.1s, background 0.2s;
-    outline: none; margin: 5px;
+    color: white; background: #4b7399; border: none; border-radius: 8px; cursor: pointer;
+    box-shadow: 0 4px 0 #2a405e; transition: transform 0.1s, background 0.2s; outline: none; margin: 5px;
   }
   button:hover { background: #557ebf; transform: translateY(-2px); }
   button:active { transform: translateY(0); box-shadow: none; }
@@ -185,12 +182,10 @@
   #turn {
     background: rgba(255,255,255,0.05); padding: 10px 30px;
     border-radius: 50px; font-weight: bold; margin-bottom: 15px;
-    border: 1px solid rgba(255,255,255,0.1); font-size: 1.2rem;
+    border: 1px solid rgba(255,255,255,0.1); font-size: clamp(1rem, 4vw, 1.2rem);
   }
 
-  .back-btn {
-    background: #2b3040; box-shadow: none; border: 1px solid #444; margin-top: 20px;
-  }
+  .back-btn { background: #2b3040; box-shadow: none; border: 1px solid #444; margin-top: 20px; }
   .back-btn:hover { background: #3a4050; }
 
   /* Animations */
@@ -198,12 +193,6 @@
   @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   @keyframes boardFadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes piecePop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-  /* Responsive Mobile */
-  @media (max-width: 500px) {
-    #chessboard { width: 340px; height: 340px; }
-    .square { width: 42.5px; height: 42.5px; font-size: 28px; }
-  }
 </style>
 </head>
 
@@ -233,9 +222,14 @@
     <select id="difficulty">
       <option value="1">Rookie (Random)</option>
       <option value="2">Veteran (Captures Only)</option>
-      <option value="3" selected>Grandmaster (Smart)</option>
+      <option value="3" selected>Grandmaster</option>
     </select>
   </div>
+
+  <label class="toggle-label">
+    <span>Show Evaluation Bar</span>
+    <input type="checkbox" id="showEval">
+  </label>
 
   <div style="margin-top:20px;">
     <button onclick="startGame()">Start Match</button>
@@ -243,7 +237,7 @@
 </div>
 
 <!-- GAME OVER MODAL -->
-<div id="gameOverModal" class="modal">
+<div id="gameOverModal" class="modal" style="transform: translate(-50%, -50%); top: 50%; left: 50%; margin:0;">
   <h3 id="winnerText">Game Over</h3>
   <p id="gameResultReason">Checkmate</p>
   <div style="margin-top:20px;">
@@ -254,7 +248,14 @@
 
 <p id="turn" style="display:none">Status: <span style="color:#f2f4f7">Your Turn</span></p>
 
-<div id="chessboard"></div>
+<!-- Game Layout Wrapper -->
+<div id="gameLayout" class="main-layout">
+  <div class="eval-container" id="evalContainer">
+      <div class="eval-fill" id="evalFill"></div>
+      <div class="eval-text" id="evalScore">0.0</div>
+  </div>
+  <div id="chessboard"></div>
+</div>
 
 <button class="back-btn" onclick="exitToDashboard()">⬅ Exit Arena</button>
 
@@ -267,33 +268,83 @@ let game = null;
 let aiLevel = 1;
 let playerSide = 'w';
 let gameActive = false;
+let isEvalEnabled = false;
+
+// --- STOCKFISH API INITIALIZATION (FOR AI MOVES) ---
+let stockfish = null;
+function initStockfish() {
+    const stockfishUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js';
+    try {
+        const blob = new Blob([`importScripts('${stockfishUrl}');`], {type: 'application/javascript'});
+        stockfish = new Worker(URL.createObjectURL(blob));
+        stockfish.onmessage = function(event) {
+            const line = event.data;
+            if(line.startsWith("bestmove")) {
+                const moveData = line.split(" ");
+                const moveStr = moveData[1];
+                if(moveStr && moveStr !== "(none)") {
+                    executeStockfishMove(moveStr);
+                }
+            }
+        };
+        stockfish.postMessage("uci");
+        stockfish.postMessage("setoption name Skill Level value 20"); // Max Level for ~3000+ ELO
+    } catch(e) {
+        console.error("Stockfish failed to load", e);
+    }
+}
+initStockfish();
+
+// --- EVALUATION STOCKFISH INITIALIZATION (FOR BAR ONLY) ---
+let evalStockfish = null;
+function initEvalStockfish() {
+    const stockfishUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js';
+    try {
+        const blob = new Blob([`importScripts('${stockfishUrl}');`], {type: 'application/javascript'});
+        evalStockfish = new Worker(URL.createObjectURL(blob));
+        evalStockfish.onmessage = function(event) {
+            const line = event.data;
+            if (line.includes("score")) parseScore(line);
+        };
+        evalStockfish.postMessage("uci");
+    } catch(e) {
+        console.error("Eval Stockfish failed to load", e);
+    }
+}
+initEvalStockfish();
 
 // --- INITIALIZATION ---
 function startGame(){
  const rules = document.getElementById("rulesBox");
- const board = document.getElementById("chessboard");
+ const layout = document.getElementById("gameLayout");
  const turn = document.getElementById("turn");
  const diffSelector = document.getElementById("difficulty");
  const sideSelector = document.getElementById("playerSide");
  
+ isEvalEnabled = document.getElementById("showEval").checked;
  aiLevel = parseInt(diffSelector.value);
  playerSide = sideSelector.value;
  gameActive = true;
  
- // Initialize Chess.js
  game = new Chess();
 
  rules.style.display = "none";
- board.style.display = "grid";
+ layout.style.display = "flex";
+ 
+ if(isEvalEnabled) {
+   document.getElementById("evalContainer").style.display = "block";
+ } else {
+   document.getElementById("evalContainer").style.display = "none";
+ }
+
  turn.style.display = "block";
  
  updateStatus();
  drawBoard();
 
- // If player chose Black, AI (White) moves first
  if(playerSide === 'b') {
     turn.innerHTML = "Status: <span style='color:#ff6b6b'>AI Thinking...</span>";
-    boardDiv.classList.add("thinking-mode");
+    document.getElementById("chessboard").classList.add("thinking-mode");
     setTimeout(makeComputerMove, 800);
  }
 }
@@ -303,7 +354,7 @@ function restartGame() {
   gameOverModal.classList.remove("show");
   gameOverModal.style.display = "none";
   document.getElementById("rulesBox").style.display = "block";
-  document.getElementById("chessboard").style.display = "none";
+  document.getElementById("gameLayout").style.display = "none";
   document.getElementById("turn").style.display = "none";
 }
 
@@ -311,28 +362,20 @@ const boardDiv=document.getElementById("chessboard");
 const turnText=document.getElementById("turn");
 let selectedSquare=null;
 
-// --- VISUAL ASSETS ---
 const piecesMap = {
-  'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', // Black
-  'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'  // White
+  'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+  'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
 };
-
-// Piece values for AI evaluation
 const pieceWeights = { p: 10, r: 50, n: 30, b: 30, q: 90, k: 900 };
 
 // --- RENDER ENGINE ---
 function drawBoard(){
  boardDiv.innerHTML="";
- const board = game.board(); // 8x8 array: [0][0] is a8
-
+ const board = game.board(); 
  const isWhiteView = (playerSide === 'w');
 
- // We loop through the Visual Grid (0..7 rows, 0..7 cols)
  for(let r=0; r<8; r++){
   for(let c=0; c<8; c++){
-   
-   // Map visual coordinates to actual board coordinates based on orientation
-   // White view: Row 0 is Rank 8 (Index 0). Black view: Row 0 is Rank 1 (Index 7).
    let realRow = isWhiteView ? r : 7 - r;
    let realCol = isWhiteView ? c : 7 - c;
 
@@ -343,17 +386,16 @@ function drawBoard(){
    sq.className="square "+((r+c)%2==0?"white":"black");
    sq.dataset.square = sqCode;
    
-   // Labels
    if (c === 0) {
       let coord = document.createElement("span");
       coord.className = "coord coord-rank";
-      coord.innerText = sqCode[1]; // Rank character
+      coord.innerText = sqCode[1]; 
       sq.appendChild(coord);
    }
    if (r === 7) {
       let coord = document.createElement("span");
       coord.className = "coord coord-file";
-      coord.innerText = sqCode[0]; // File character
+      coord.innerText = sqCode[0]; 
       sq.appendChild(coord);
    }
    
@@ -371,24 +413,17 @@ function drawBoard(){
    boardDiv.appendChild(sq);
   }
  }
- 
  if(game.in_check()){ highlightKing(); }
+ triggerEval();
 }
 
 function highlightKing() {
   const board = game.board();
   const turnColor = game.turn();
-  
-  // Need to find king in logical board, then map to visual div
-  let kingPos = null;
   for(let r=0; r<8; r++){
     for(let c=0; c<8; c++){
       if(board[r][c] && board[r][c].type === 'k' && board[r][c].color === turnColor) {
-        // We found the king at logical [r][c]
-        // Now find the visual square index
         const isWhiteView = (playerSide === 'w');
-        // If white view: visualRow = r, visualCol = c
-        // If black view: visualRow = 7-r, visualCol = 7-c
         let visR = isWhiteView ? r : 7-r;
         let visC = isWhiteView ? c : 7-c;
         let index = visR * 8 + visC;
@@ -399,62 +434,87 @@ function highlightKing() {
 }
 
 function updateStatus(){
-  if(game.game_over()) return; // Handled by checkGameOver
-
+  if(game.game_over()) return; 
   let t = game.turn() === playerSide ? "Your Turn" : "AI Thinking...";
   let color = game.turn() === playerSide ? "#f2f4f7" : "#ff6b6b";
   let check = game.in_check() ? " (CHECK!)" : "";
   turnText.innerHTML = `Status: <span style="color:${color}">${t}${check}</span>`;
 }
 
+// --- EVALUATION BAR LOGIC ---
+function triggerEval() {
+    if(!isEvalEnabled || !evalStockfish || game.game_over()) return;
+    evalStockfish.postMessage("stop"); // stop previous calculation if any
+    evalStockfish.postMessage("position fen " + game.fen());
+    evalStockfish.postMessage("go depth 12"); // Quick depth for bar updates
+}
+
+function parseScore(line) {
+    const match = line.match(/score (cp|mate) (-?\d+)/);
+    if (match) {
+        const type = match[1];
+        let rawScore = parseInt(match[2]);
+        
+        // Stockfish returns score relative to side to move. We always want it from White's perspective.
+        if (game.turn() === 'b') rawScore = -rawScore;
+        
+        updateEvalBar(type, rawScore);
+    }
+}
+
+function updateEvalBar(type, score) {
+    const fill = document.getElementById("evalFill");
+    const label = document.getElementById("evalScore");
+    let percentage = 50;
+    let text = "0.0";
+
+    if (type === 'mate') {
+        percentage = score > 0 ? 100 : 0;
+        text = "M" + Math.abs(score);
+    } else {
+        text = (score / 100).toFixed(2);
+        if (score > 0) text = "+" + text;
+        percentage = (1 / (1 + Math.exp(-score / 300))) * 100;
+    }
+    
+    fill.style.height = `${percentage}%`;
+    label.innerText = text;
+    
+    if (percentage > 50) {
+        label.classList.add("white-side");
+        label.classList.remove("black-side");
+    } else {
+        label.classList.add("black-side");
+        label.classList.remove("white-side");
+    }
+}
+
 // --- INTERACTION ---
 function onSquareClick(square){
- // Prevent move if game over or not player's turn
  if(!gameActive || game.turn() !== playerSide) return;
-
  if(game.game_over()) return;
 
- // 1. Move Attempt
  if(selectedSquare){
-  let move = game.move({
-    from: selectedSquare,
-    to: square,
-    promotion: 'q' 
-  });
+  let move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
 
   if(move){
-    drawBoard();
-    updateStatus();
-    
+    drawBoard(); updateStatus();
     if(checkGameOver()) return;
-
-    // Trigger AI
     boardDiv.classList.add("thinking-mode");
     setTimeout(makeComputerMove, 300);
-    
-    selectedSquare = null;
-    return;
+    selectedSquare = null; return;
   }
   
-  // Switch selection if clicked own piece
   let piece = game.get(square);
   if(piece && piece.color === game.turn()){
-     highlightSquare(square);
-     selectedSquare = square;
-     return;
+     highlightSquare(square); selectedSquare = square; return;
   }
-  
-  // Deselect
-  drawBoard();
-  selectedSquare = null;
-  return;
+  drawBoard(); selectedSquare = null; return;
  }
 
- // 2. Select Piece
  let piece = game.get(square);
  if(piece && piece.color === game.turn()){
-  highlightSquare(square);
-  selectedSquare = square;
+  highlightSquare(square); selectedSquare = square;
  }
 }
 
@@ -468,17 +528,13 @@ function highlightSquare(square){
    let targetDiv = [...boardDiv.children].find(div => div.dataset.square === move.to);
    if(targetDiv){
      targetDiv.classList.add("highlight");
-     if(game.get(move.to)){
-       targetDiv.classList.add("capture");
-     }
+     if(game.get(move.to)) targetDiv.classList.add("capture");
    }
  });
 }
 
-// Check Game Over and Show Modal
 function checkGameOver() {
   if (!game.game_over()) return false;
-
   gameActive = false;
   boardDiv.classList.remove("thinking-mode");
   
@@ -487,29 +543,22 @@ function checkGameOver() {
   const reasonText = document.getElementById("gameResultReason");
 
   if (game.in_checkmate()) {
-    // If it is currently my turn, I have been checkmated.
     if (game.turn() === playerSide) {
-      winnerText.textContent = "YOU LOST!";
-      winnerText.className = "lose-text";
+      winnerText.textContent = "YOU LOST!"; winnerText.className = "lose-text";
       reasonText.textContent = "Checkmate. The AI outsmarted you.";
     } else {
-      winnerText.textContent = "VICTORY!";
-      winnerText.className = "win-text";
+      winnerText.textContent = "VICTORY!"; winnerText.className = "win-text";
       reasonText.textContent = "Checkmate! You defeated the AI.";
     }
   } else if (game.in_draw()) {
-    winnerText.textContent = "DRAW";
-    winnerText.className = "draw-text";
+    winnerText.textContent = "DRAW"; winnerText.className = "draw-text";
     reasonText.textContent = "Stalemate, repetition, or insufficient material.";
   } else {
-    winnerText.textContent = "GAME OVER";
-    reasonText.textContent = "The game has ended.";
+    winnerText.textContent = "GAME OVER"; reasonText.textContent = "The game has ended.";
   }
-
   modal.classList.add("show");
   return true;
 }
-
 
 // --- AI ENGINE ---
 
@@ -523,6 +572,15 @@ function shuffle(array) {
 
 function makeComputerMove(){
   if(game.game_over()) return;
+
+  // --- Grandmaster Stockfish Logic ---
+  if(aiLevel === 3 && stockfish) {
+      boardDiv.classList.add("thinking-mode");
+      turnText.innerHTML = "Status: <span style='color:#ff6b6b'>Grandmaster Thinking...</span>";
+      stockfish.postMessage("position fen " + game.fen());
+      stockfish.postMessage("go depth 15"); // Deep 15-move analysis
+      return; // Execution pauses here, waiting for stockfish.onmessage to trigger
+  }
 
   let bestMove = null;
   let moves = game.moves({verbose:true});
@@ -542,7 +600,7 @@ function makeComputerMove(){
     else bestMove = moves[0];
   } 
   else {
-    // Minimax
+    // Fallback Minimax (Only used if Stockfish fails to load)
     let bestVal = -9999;
     for(let i=0; i<moves.length; i++){
         game.move(moves[i]);
@@ -563,11 +621,23 @@ function makeComputerMove(){
   checkGameOver();
 }
 
-function minimax(depth, alpha, beta, isMaximizing){
-    if(depth === 0 || game.game_over()){
-        return evaluateBoard(game.board());
-    }
+// Helper to execute the move returned by Stockfish
+function executeStockfishMove(moveStr) {
+    if(!gameActive) return;
+    const from = moveStr.substring(0, 2);
+    const to = moveStr.substring(2, 4);
+    const promotion = moveStr.length > 4 ? moveStr[4] : 'q';
+    
+    game.move({ from: from, to: to, promotion: promotion });
+    
+    boardDiv.classList.remove("thinking-mode");
+    drawBoard();
+    updateStatus();
+    checkGameOver();
+}
 
+function minimax(depth, alpha, beta, isMaximizing){
+    if(depth === 0 || game.game_over()){ return evaluateBoard(game.board()); }
     let moves = game.moves();
     
     if(isMaximizing){
@@ -597,23 +667,15 @@ function minimax(depth, alpha, beta, isMaximizing){
 
 function evaluateBoard(board){
     let total = 0;
-    
-    // AI Color is the opposite of Player Side
     const aiColor = (playerSide === 'w') ? 'b' : 'w';
-
     for(let r=0; r<8; r++){
         for(let c=0; c<8; c++){
             let p = board[r][c];
             if(p){
                 let val = pieceWeights[p.type];
-                
-                // Position bonuses (Center Control)
                 if(p.type === 'p' && (r===3 || r===4) && (c===3 || c===4)) val += 5;
                 if(p.type === 'n' && (r===2 || r===5) && (c===2 || c===5)) val += 5;
-
-                // Maximize AI Score
-                if(p.color === aiColor) total += val;
-                else total -= val;
+                if(p.color === aiColor) total += val; else total -= val;
             }
         }
     }

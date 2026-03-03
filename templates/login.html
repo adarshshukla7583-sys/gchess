@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Modern Animated Login</title>
   
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* 1. Global Reset & Body Styling */
@@ -21,7 +21,6 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      /* Background Gradient Animation */
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       overflow: hidden;
     }
@@ -35,23 +34,43 @@
       border-radius: 20px;
       box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
       text-align: center;
-      
-      /* Entrance Animation */
       opacity: 0;
       transform: translateY(30px);
       animation: fadeInUp 0.8s ease-out forwards;
     }
 
-    /* Heading Styling */
     .login-container h2 {
       color: #333;
       font-weight: 600;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
       font-size: 28px;
-      letter-spacing: 1px;
     }
 
-    /* 3. Input Fields Styling */
+    /* 3. Small Error Pop Animation */
+    .error-pop {
+      background: #fff0f0;
+      color: #e74c3c;
+      padding: 12px 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid #ffcccc;
+      box-shadow: 0 4px 10px rgba(231, 76, 60, 0.15);
+      /* This gives it the small nice pop-in effect */
+      animation: popIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* 4. Input Fields Styling */
     .input-group {
       margin-bottom: 20px;
       position: relative;
@@ -61,7 +80,7 @@
       width: 100%;
       padding: 15px 20px;
       border: 2px solid #e1e1e1;
-      border-radius: 50px; /* Fully rounded corners */
+      border-radius: 50px;
       outline: none;
       font-size: 15px;
       transition: all 0.3s ease;
@@ -69,7 +88,6 @@
       color: #333;
     }
 
-    /* Input Focus Effect (Smooth Border Color & Shadow) */
     input:focus {
       border-color: #764ba2;
       background: #fff;
@@ -77,12 +95,9 @@
       transform: scale(1.02);
     }
 
-    /* Placeholder styling */
-    input::placeholder {
-      color: #aaa;
-    }
+    input::placeholder { color: #aaa; }
 
-    /* 4. Button Styling */
+    /* 5. Button Styling */
     button {
       width: 100%;
       padding: 15px;
@@ -98,18 +113,15 @@
       transition: all 0.3s ease;
     }
 
-    /* Button Hover Animation */
     button:hover {
-      transform: translateY(-3px); /* Moves up slightly */
+      transform: translateY(-3px);
       box-shadow: 0 10px 20px rgba(118, 75, 162, 0.5);
-      background: linear-gradient(to right, #764ba2, #667eea); /* Gradient shift */
+      background: linear-gradient(to right, #764ba2, #667eea);
     }
 
-    button:active {
-      transform: scale(0.98); /* Click effect */
-    }
+    button:active { transform: scale(0.98); }
 
-    /* 5. Signup Link Styling */
+    /* 6. Signup Link Styling */
     a {
       display: block;
       margin-top: 20px;
@@ -119,19 +131,11 @@
       transition: color 0.3s ease;
     }
 
-    a:hover {
-      color: #764ba2;
-      text-decoration: underline;
-    }
+    a:hover { color: #764ba2; text-decoration: underline; }
 
-    /* 6. Keyframes for Entrance Animation */
     @keyframes fadeInUp {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      to { opacity: 1; transform: translateY(0); }
     }
-
   </style>
 </head>
 <body>
@@ -139,6 +143,13 @@
   <div class="login-container">
     <form method="post">
       <h2>Welcome Back</h2>
+      
+      <!-- Nicely Designed Error Pop -->
+      {% if error %}
+      <div class="error-pop">
+        ⚠️ {{ error }}
+      </div>
+      {% endif %}
       
       <div class="input-group">
         <input name="username" type="text" placeholder="Username" required>
