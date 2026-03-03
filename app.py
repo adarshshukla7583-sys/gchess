@@ -164,4 +164,4 @@ def handle_disconnect():
 if __name__ == "__main__":
     init_db() # Create database table if it doesn't exist
     # host="0.0.0.0" allows other devices on your Wi-Fi to connect via your IP
-    socketio.run(app, host="192.168.0.102", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
