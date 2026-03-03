@@ -168,7 +168,6 @@ def get_db():
 
 # ---------- AUTO CREATE TABLE ----------
 def init_db():
-    """Initializes the database and creates the users table if it doesn't exist."""
     db = get_db()
     cur = db.cursor()
     cur.execute("""
@@ -190,10 +189,7 @@ def login():
 
         db = get_db()
         cur = db.cursor()
-        cur.execute(
-            "SELECT * FROM users WHERE username=? AND password=?",
-            (u, p)
-        )
+        cur.execute("SELECT * FROM users WHERE username=? AND password=?", (u, p))
         user = cur.fetchone()
         db.close()
 
@@ -216,10 +212,7 @@ def signup():
         try:
             db = get_db()
             cur = db.cursor()
-            cur.execute(
-                "INSERT INTO users (username, password) VALUES (?, ?)",
-                (u, p)
-            )
+            cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (u, p))
             db.commit()
             db.close()
             return redirect("/")
@@ -255,30 +248,34 @@ waiting_player = None
 def handle_join(data):
     global waiting_player
     user = session.get('user', 'Guest')
+
+    if room not in active_rooms:
+        active_rooms[room] = {'w': None, 'b': None}
+
+    assigned_color = 'observer'
     
-    if waiting_player is None:
-        room_id = request.sid
-        join_room(room_id)
-        player_rooms[request.sid] = room_id
-        waiting_player = {'sid': request.sid, 'user': user, 'room': room_id}
+    # Assign colors based on availability
+    if active_rooms[room]['w'] is None:
+        active_rooms[room]['w'] = {'sid': request.sid, 'user': user}
+        assigned_color = 'w'
+    elif active_rooms[room]['b'] is None:
+        active_rooms[room]['b'] = {'sid': request.sid, 'user': user}
+        assigned_color = 'b'
+
+    # Send the assigned color back to the user
+    emit('assign_color', {'color': assigned_color})
+
+    # Broadcast that this player joined
+    emit('player_joined', {'username': user, 'color': assigned_color}, room=room)
+
+    # Check if both players are ready
+    if active_rooms[room]['w'] is not None and active_rooms[room]['b'] is not None:
+        # Tell both clients to hide the loading screen and start
+        emit('game_ready', {'status': 'start'}, room=room)
         
-        emit('assign_color', {'color': 'w'})
-        emit('player_joined', {'username': user, 'color': 'w'}, room=room_id)
-    else:
-        room_id = waiting_player['room']
-        join_room(room_id)
-        player_rooms[request.sid] = room_id
-        
-        p1 = waiting_player
-        p2 = {'sid': request.sid, 'user': user, 'room': room_id}
-        waiting_player = None
-        
-        emit('assign_color', {'color': 'b'})
-        
-        emit('player_joined', {'username': p2['user'], 'color': 'b'}, room=room_id)
-        emit('player_joined', {'username': p1['user'], 'color': 'w'}, to=request.sid)
-        
-        emit('game_ready', {'status': 'start'}, room=room_id)
+        # Sync names so both sides see who they are playing against
+        emit('player_joined', {'username': active_rooms[room]['w']['user'], 'color': 'w'}, room=room)
+        emit('player_joined', {'username': active_rooms[room]['b']['user'], 'color': 'b'}, room=room)
 
 @socketio.on('send_move')
 def handle_move(data):
@@ -294,17 +291,19 @@ def handle_chat(data):
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    global waiting_player
-    if waiting_player and waiting_player['sid'] == request.sid:
-        waiting_player = None
-    
-    room_id = player_rooms.get(request.sid)
-    if room_id:
-        user = session.get('user', 'Guest')
-        emit('game_ready', {'status': 'reconnecting', 'user': user}, room=room_id)
-        del player_rooms[request.sid]
+    # If a player disconnects, free up their spot and notify the other player
+    for room, players in active_rooms.items():
+        if players['w'] is not None and players['w']['sid'] == request.sid:
+            user = players['w']['user']
+            players['w'] = None
+            emit('game_ready', {'status': 'reconnecting', 'user': user}, room=room)
+        elif players['b'] is not None and players['b']['sid'] == request.sid:
+            user = players['b']['user']
+            players['b'] = None
+            emit('game_ready', {'status': 'reconnecting', 'user': user}, room=room)
 
 # ---------- MAIN ----------
 if __name__ == "__main__":
-    init_db()
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    init_db() # Create database table if it doesn't exist
+    # host="0.0.0.0" allows other devices on your Wi-Fi to connect via your IP
+    socketio.run(app, host="192.168.0.102", port=5000, debug=True)
